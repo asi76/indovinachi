@@ -1,0 +1,87 @@
+[
+  {
+    "name": "user_profiles",
+    "type": "base",
+    "listRule": null,
+    "viewRule": null,
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      { "name": "email", "type": "email", "required": true },
+      { "name": "role", "type": "select", "required": true, "maxSelect": 1, "values": ["pending", "enabled", "admin"] },
+      { "name": "apps", "type": "select", "required": false, "maxSelect": 6, "values": ["the-party", "tombola", "intesa", "quizzone", "indovinachi"] },
+      { "name": "name", "type": "text", "required": false, "max": 120 }
+    ],
+    "indexes": ["CREATE UNIQUE INDEX idx_user_profiles_email ON user_profiles (email)"]
+  },
+  {
+    "name": "icebreaker_sessions",
+    "type": "base",
+    "listRule": "",
+    "viewRule": "",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      { "name": "code", "type": "text", "required": true, "min": 6, "max": 6 },
+      { "name": "hostEmail", "type": "email", "required": true },
+      { "name": "hostName", "type": "text", "required": true, "max": 120 },
+      { "name": "title", "type": "text", "required": true, "max": 120 },
+      { "name": "theme", "type": "text", "required": false, "max": 280 },
+      { "name": "status", "type": "select", "required": true, "maxSelect": 1, "values": ["draft", "lobby", "collecting", "ready", "revealing", "finished", "terminated"] },
+      { "name": "questions", "type": "json", "required": false },
+      { "name": "presenterToken", "type": "text", "required": true, "max": 64 },
+      { "name": "remoteToken", "type": "text", "required": true, "max": 64 },
+      { "name": "revealQueue", "type": "json", "required": false },
+      { "name": "currentQuestionIndex", "type": "number", "required": false, "min": -1, "max": 500, "noDecimal": true },
+      { "name": "currentAnswerIndex", "type": "number", "required": false, "min": -1, "max": 5000, "noDecimal": true },
+      { "name": "currentQuestionText", "type": "text", "required": false, "max": 500 },
+      { "name": "currentAnswerText", "type": "text", "required": false, "max": 1000 },
+      { "name": "revealPhase", "type": "select", "required": false, "maxSelect": 1, "values": ["idle", "question", "answer", "complete"] },
+      { "name": "discoSpin", "type": "number", "required": false, "min": 0, "max": 9999999, "noDecimal": true }
+    ],
+    "indexes": ["CREATE UNIQUE INDEX idx_icebreaker_sessions_code ON icebreaker_sessions (code)"]
+  },
+  {
+    "name": "icebreaker_players",
+    "type": "base",
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "",
+    "updateRule": "",
+    "deleteRule": null,
+    "fields": [
+      { "name": "sessionCode", "type": "text", "required": true, "min": 6, "max": 6 },
+      { "name": "nickname", "type": "text", "required": true, "max": 28 },
+      { "name": "avatar", "type": "text", "required": true, "max": 8 },
+      { "name": "submitted", "type": "bool", "required": false },
+      { "name": "joinedAt", "type": "date", "required": true },
+      { "name": "submittedAt", "type": "date", "required": false }
+    ],
+    "indexes": ["CREATE INDEX idx_icebreaker_players_session_code ON icebreaker_players (sessionCode)"]
+  },
+  {
+    "name": "icebreaker_responses",
+    "type": "base",
+    "listRule": "",
+    "viewRule": "",
+    "createRule": "",
+    "updateRule": "",
+    "deleteRule": null,
+    "fields": [
+      { "name": "sessionCode", "type": "text", "required": true, "min": 6, "max": 6 },
+      { "name": "playerId", "type": "text", "required": true, "max": 32 },
+      { "name": "playerNickname", "type": "text", "required": true, "max": 28 },
+      { "name": "playerAvatar", "type": "text", "required": true, "max": 8 },
+      { "name": "questionIndex", "type": "number", "required": true, "min": 0, "max": 500, "noDecimal": true },
+      { "name": "questionText", "type": "text", "required": true, "max": 500 },
+      { "name": "answerText", "type": "text", "required": true, "max": 1000 },
+      { "name": "submittedAt", "type": "date", "required": true }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_icebreaker_responses_session_code ON icebreaker_responses (sessionCode)",
+      "CREATE INDEX idx_icebreaker_responses_player ON icebreaker_responses (playerId)"
+    ]
+  }
+]

@@ -1,0 +1,13 @@
+name: indovinachi-pocketbase
+
+services:
+  pocketbase:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pb-indovinachi
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    volumes:
+      - ./pb_data:/pb/pb_data
