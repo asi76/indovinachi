@@ -530,7 +530,7 @@ app.post('/api/sessions/:code/reveal/finish', requireRemoteSession, async (req, 
 
 app.use(express.static(distDir));
 
-app.get('*', (req, res) => {
+app.use((req, res) => {
   const target = req.path || '/';
   if (target.startsWith('/api/')) {
     return res.status(404).json({ error: 'Endpoint non trovato' });
