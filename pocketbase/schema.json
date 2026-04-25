@@ -10,7 +10,7 @@
     "fields": [
       { "name": "email", "type": "email", "required": true },
       { "name": "role", "type": "select", "required": true, "maxSelect": 1, "values": ["pending", "enabled", "admin"] },
-      { "name": "apps", "type": "select", "required": false, "maxSelect": 6, "values": ["the-party", "tombola", "intesa", "quizzone", "indovinachi"] },
+      { "name": "apps", "type": "select", "required": false, "maxSelect": 5, "values": ["the-party", "tombola", "intesa", "quizzone", "indovinachi"] },
       { "name": "name", "type": "text", "required": false, "max": 120 }
     ],
     "indexes": ["CREATE UNIQUE INDEX idx_user_profiles_email ON user_profiles (email)"]

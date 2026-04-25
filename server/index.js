@@ -32,8 +32,16 @@ app.use(express.json());
 function ensureFirebaseAdmin() {
   if (admin.apps.length > 0) return;
 
+  const serviceAccountBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_B64;
   const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+
+  if (serviceAccountBase64) {
+    admin.initializeApp({
+      credential: admin.credential.cert(JSON.parse(Buffer.from(serviceAccountBase64, 'base64').toString('utf8'))),
+    });
+    return;
+  }
 
   if (serviceAccountJson) {
     admin.initializeApp({ credential: admin.credential.cert(JSON.parse(serviceAccountJson)) });

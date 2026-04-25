@@ -28,6 +28,9 @@ npm run build
 npm run server
 ```
 
+Per il backend servono anche le credenziali Firebase Admin. In ambienti come Coolify usa
+`FIREBASE_SERVICE_ACCOUNT_B64` con il JSON del service account codificato in base64.
+
 ## PocketBase
 
 Lo schema e nella cartella [pocketbase/schema.json](/home/asi/indovinachi/pocketbase/schema.json).
