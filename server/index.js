@@ -342,9 +342,21 @@ app.get('/api/host/sessions', requireAuthorizedHost, async (req, res) => {
     const pocketBase = await authenticatePocketBase();
     const sessions = await pocketBase.collection(SESSION_COLLECTION).getFullList({
       filter: `hostEmail="${escapeFilter(req.user.email)}"`,
-      sort: '-updated',
     });
-    const hydrated = await Promise.all(sessions.map((session) => buildSessionView(pocketBase, session)));
+    const hydratedResults = await Promise.allSettled(
+      sessions.map(async (session) => buildSessionView(pocketBase, session)),
+    );
+    const hydrated = hydratedResults
+      .flatMap((result, index) => {
+        if (result.status === 'fulfilled') return [result.value];
+        console.error('[hostSessions] failed to hydrate session', sessions[index]?.id, result.reason);
+        return [];
+      })
+      .sort((left, right) => {
+        const leftUpdated = Date.parse(left.updated || left.created || '') || 0;
+        const rightUpdated = Date.parse(right.updated || right.created || '') || 0;
+        return rightUpdated - leftUpdated;
+      });
     res.json({ sessions: hydrated });
   } catch (error) {
     console.error('[hostSessions]', error);
