@@ -11,8 +11,7 @@ async function authorizeCurrentUser(): Promise<AuthSession> {
   const token = await currentUser.getIdToken();
   const response = await fetch('/api/auth/session', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token }),
+    headers: { 'Content-Type': 'application/json', Authorization:  },
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || 'Accesso non autorizzato');
