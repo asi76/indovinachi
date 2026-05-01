@@ -44,7 +44,7 @@ export function PlayerJoinScreen({ sessionCode }: { sessionCode: string }) {
   const touchStartX = useRef<number | null>(null);
   const isFirstLoad = useRef(true);
 
-  const pageSize = 30;
+  const pageSize = 25;
   const totalPages = Math.ceil(AVATARS.length / pageSize);
   const pageAvatars = useMemo(() => AVATARS.slice(page * pageSize, (page + 1) * pageSize), [page]);
 
@@ -169,36 +169,36 @@ export function PlayerJoinScreen({ sessionCode }: { sessionCode: string }) {
   );
 
   if (!player) return (
-    <div className="app-shell player-shell">
-      <section className="party-panel party-panel--wide" style={{ maxWidth: '600px' }}>
-        <div className="quizzone-topbar">
-          <span className="eyebrow">Sessione {session.code}</span>
-          <h1>Entra nella festa</h1>
-        </div>
+    <div className="indovina-avatar-screen">
+      <header className="indovina-avatar-header">
+        <h1>Indovina <span>chi?</span></h1>
+        <div className="indovina-session-code">Sessione: {session.code}</div>
+        <h2>Scegli il tuo avatar</h2>
+      </header>
 
-        <div className="avatar-picker-wrap">
-          <button type="button" className="avatar-nav" onClick={() => setPage((c) => Math.max(0, c - 1))} disabled={page === 0}>◀</button>
-          <div className="avatar-grid" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      <main className="indovina-avatar-main">
+        <div className="indovina-avatar-picker">
+          <button type="button" className="indovina-avatar-nav" onClick={() => setPage((c) => Math.max(0, c - 1))} disabled={page === 0} aria-label="Pagina avatar precedente">&lsaquo;</button>
+          <div className="indovina-avatar-grid" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
             {pageAvatars.map((item) => (
-              <button key={item} type="button" className={`avatar-tile${item === avatar ? ' is-selected' : ''}`} onClick={() => setAvatar(item)}>{item}</button>
+              <button key={item} type="button" className={`indovina-avatar-tile${item === avatar ? ' is-selected' : ''}`} onClick={() => setAvatar(item)}>{item}</button>
             ))}
           </div>
-          <button type="button" className="avatar-nav" onClick={() => setPage((c) => Math.min(totalPages - 1, c + 1))} disabled={page === totalPages - 1}>▶</button>
+          <button type="button" className="indovina-avatar-nav" onClick={() => setPage((c) => Math.min(totalPages - 1, c + 1))} disabled={page === totalPages - 1} aria-label="Pagina avatar successiva">&rsaquo;</button>
         </div>
 
-        <div className="avatar-pagination">
+        <div className="indovina-avatar-pagination">
           {Array.from({ length: totalPages }).map((_, i) => (
-            <button key={i} type="button" className={`avatar-dot${i === page ? ' is-active' : ''}`} onClick={() => setPage(i)} />
+            <button key={i} type="button" className={`indovina-avatar-dot${i === page ? ' is-active' : ''}`} onClick={() => setPage(i)} aria-label={`Pagina avatar ${i + 1}`} />
           ))}
         </div>
+      </main>
 
-        <form className="join-form" onSubmit={handleJoin}>
-          <div className="selected-avatar">{avatar}</div>
-          <input className="party-input" value={nickname} onChange={(e) => setNickname(e.target.value)} maxLength={28} placeholder="Il tuo nickname" />
-          <button className="party-button party-button--primary" type="submit" disabled={joining}>{joining ? 'Entro...' : 'Entra'}</button>
-        </form>
+      <form className="indovina-join-form" onSubmit={handleJoin}>
+        <input className="indovina-nickname-input" value={nickname} onChange={(e) => setNickname(e.target.value.slice(0, 20))} maxLength={20} placeholder="Il tuo nickname" autoFocus />
         {error && <p className="error-text">{error}</p>}
-      </section>
+        <button className="indovina-play-button" type="submit" disabled={joining || !nickname.trim()}>{joining ? 'Entro...' : 'Entra'}</button>
+      </form>
     </div>
   );
 

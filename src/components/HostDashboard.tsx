@@ -273,23 +273,30 @@ export function HostDashboard({ authSession }: HostDashboardProps) {
                 </button>
               </div>
 
-              <div className="qr-grid">
-                <article className="qr-card">
-                  <h3>Partecipanti</h3>
-                  <QrCanvas url={joinUrl(selectedSession)} />
-                  <a href={joinUrl(selectedSession)} target="_blank" rel="noreferrer">{joinUrl(selectedSession).replace(/^https?:\/\//, '')}</a>
-                </article>
-                <article className="qr-card">
-                  <h3>Display</h3>
-                  <QrCanvas url={presenterDisplayUrl(selectedSession)} />
-                  <a href={presenterDisplayUrl(selectedSession)} target="_blank" rel="noreferrer">{presenterDisplayUrl(selectedSession).replace(/^https?:\/\//, '')}</a>
-                </article>
-                <article className="qr-card">
-                  <h3>Telecomando</h3>
-                  <QrCanvas url={remoteUrl(selectedSession)} />
-                  <a href={remoteUrl(selectedSession)} target="_blank" rel="noreferrer">{remoteUrl(selectedSession).replace(/^https?:\/\//, '')}</a>
-                </article>
-              </div>
+              {selectedSession.status === 'revealing' || selectedSession.status === 'finished' ? (
+                <div className="presenter-callout presenter-callout--ready">
+                  <h2>Reveal in corso</h2>
+                  <p>Il QR partecipanti e nascosto: sul display presenter gira la disco ball con domanda e risposta estratte.</p>
+                </div>
+              ) : (
+                <div className="qr-grid">
+                  <article className="qr-card">
+                    <h3>Partecipanti</h3>
+                    <QrCanvas url={joinUrl(selectedSession)} />
+                    <a href={joinUrl(selectedSession)} target="_blank" rel="noreferrer">{joinUrl(selectedSession).replace(/^https?:\/\//, '')}</a>
+                  </article>
+                  <article className="qr-card">
+                    <h3>Display</h3>
+                    <QrCanvas url={presenterDisplayUrl(selectedSession)} />
+                    <a href={presenterDisplayUrl(selectedSession)} target="_blank" rel="noreferrer">{presenterDisplayUrl(selectedSession).replace(/^https?:\/\//, '')}</a>
+                  </article>
+                  <article className="qr-card">
+                    <h3>Telecomando</h3>
+                    <QrCanvas url={remoteUrl(selectedSession)} />
+                    <a href={remoteUrl(selectedSession)} target="_blank" rel="noreferrer">{remoteUrl(selectedSession).replace(/^https?:\/\//, '')}</a>
+                  </article>
+                </div>
+              )}
 
               <div className="player-list">
                 {selectedSession.players.map((player) => (

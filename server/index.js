@@ -90,6 +90,11 @@ function shuffle(list) {
   return cloned;
 }
 
+function randomItem(list) {
+  if (!Array.isArray(list) || list.length === 0) return null;
+  return list[Math.floor(Math.random() * list.length)];
+}
+
 function normalizeQuestions(value) {
   return Array.isArray(value)
     ? value.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 24)
@@ -312,14 +317,18 @@ async function startRevealForSession(pocketBase, sessionRecord) {
     throw new Error('Nessuna risposta disponibile per il reveal');
   }
 
+  const firstQuestion = randomItem(queue) || queue[0];
+  const firstQuestionIndex = queue.indexOf(firstQuestion);
+  const firstAnswer = randomItem(firstQuestion.answers);
+
   return pocketBase.collection(SESSION_COLLECTION).update(sessionRecord.id, {
     status: 'revealing',
     revealQueue: queue,
-    currentQuestionIndex: 0,
-    currentAnswerIndex: -1,
-    currentQuestionText: queue[0].prompt,
-    currentAnswerText: '',
-    revealPhase: 'question',
+    currentQuestionIndex: firstQuestionIndex,
+    currentAnswerIndex: firstAnswer ? firstQuestion.answers.indexOf(firstAnswer) : -1,
+    currentQuestionText: firstQuestion.prompt,
+    currentAnswerText: firstAnswer?.text || '',
+    revealPhase: 'answer',
     discoSpin: Date.now(),
   });
 }
