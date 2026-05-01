@@ -42,7 +42,8 @@ export function PlayerJoinScreen({ sessionCode }: { sessionCode: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const touchStartX = useRef<number | null>(null);
-  
+  const isFirstLoad = useRef(true);
+
   const pageSize = 30;
   const totalPages = Math.ceil(AVATARS.length / pageSize);
   const pageAvatars = useMemo(() => AVATARS.slice(page * pageSize, (page + 1) * pageSize), [page]);
@@ -50,20 +51,28 @@ export function PlayerJoinScreen({ sessionCode }: { sessionCode: string }) {
   useEffect(() => {
     let active = true;
     async function load() {
-      setLoading(true);
+      // solo il primo caricamento mostra lo spinner; i poll successivi aggiornano in background
+      if (isFirstLoad.current) setLoading(true);
       try {
         const sessionView = await fetchPublicSession(sessionCode);
         if (!active) return;
         setSession(sessionView);
         const token = loadToken();
         if (token?.playerId && token?.sessionCode === sessionCode) {
-          const existingPlayer = await pb.collection('icebreaker_players').getOne(token.playerId);
-          if (active) setPlayer(existingPlayer as unknown as IcebreakerPlayerRecord);
+          try {
+            const existingPlayer = await pb.collection('icebreaker_players').getOne(token.playerId);
+            if (active) setPlayer(existingPlayer as unknown as IcebreakerPlayerRecord);
+          } catch {
+            // token stale: ignora silenziosamente, il giocatore deve ri-entrare
+          }
         }
       } catch (e) {
-        if (active) setError(parseError(e, 'Sessione non trovata'));
+        if (active && isFirstLoad.current) setError(parseError(e, 'Sessione non trovata'));
       } finally {
-        if (active) setLoading(false);
+        if (active) {
+          setLoading(false);
+          isFirstLoad.current = false;
+        }
       }
     }
     void load();
@@ -94,7 +103,7 @@ export function PlayerJoinScreen({ sessionCode }: { sessionCode: string }) {
       const duplicates = await pb.collection('icebreaker_players').getList(1, 1, {
         filter: `sessionCode="${sessionCode}" && nickname="${trimmedNickname.replace(/"/g, '\\"')}"`,
       });
-      if (duplicates.totalItems > 0) throw new Error('Nickname gi?? usato');
+      if (duplicates.totalItems > 0) throw new Error('Nickname già usato');
       const created = await pb.collection('icebreaker_players').create({
         sessionCode, nickname: trimmedNickname, avatar, submitted: false,
         joinedAt: new Date().toISOString(),
@@ -154,7 +163,7 @@ export function PlayerJoinScreen({ sessionCode }: { sessionCode: string }) {
     <div className="app-shell player-shell">
       <section className="party-panel centered-panel">
         <h1>Sessione non disponibile</h1>
-        <p>{error || 'Il codice non esiste o la sessione ?? terminata'}</p>
+        <p>{error || 'Il codice non esiste o la sessione è terminata'}</p>
       </section>
     </div>
   );
@@ -166,23 +175,23 @@ export function PlayerJoinScreen({ sessionCode }: { sessionCode: string }) {
           <span className="eyebrow">Sessione {session.code}</span>
           <h1>Entra nella festa</h1>
         </div>
-        
+
         <div className="avatar-picker-wrap">
-          <button type="button" className="avatar-nav" onClick={() => setPage((c) => Math.max(0, c - 1))} disabled={page === 0}>???</button>
+          <button type="button" className="avatar-nav" onClick={() => setPage((c) => Math.max(0, c - 1))} disabled={page === 0}>◀</button>
           <div className="avatar-grid" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
             {pageAvatars.map((item) => (
               <button key={item} type="button" className={`avatar-tile${item === avatar ? ' is-selected' : ''}`} onClick={() => setAvatar(item)}>{item}</button>
             ))}
           </div>
-          <button type="button" className="avatar-nav" onClick={() => setPage((c) => Math.min(totalPages - 1, c + 1))} disabled={page === totalPages - 1}>???</button>
+          <button type="button" className="avatar-nav" onClick={() => setPage((c) => Math.min(totalPages - 1, c + 1))} disabled={page === totalPages - 1}>▶</button>
         </div>
-        
+
         <div className="avatar-pagination">
           {Array.from({ length: totalPages }).map((_, i) => (
             <button key={i} type="button" className={`avatar-dot${i === page ? ' is-active' : ''}`} onClick={() => setPage(i)} />
           ))}
         </div>
-        
+
         <form className="join-form" onSubmit={handleJoin}>
           <div className="selected-avatar">{avatar}</div>
           <input className="party-input" value={nickname} onChange={(e) => setNickname(e.target.value)} maxLength={28} placeholder="Il tuo nickname" />
@@ -204,6 +213,30 @@ export function PlayerJoinScreen({ sessionCode }: { sessionCode: string }) {
     </div>
   );
 
+  // Raccolta non ancora aperta dall'host
+  if (session.status === 'draft' || session.status === 'lobby') return (
+    <div className="app-shell player-shell">
+      <section className="party-panel centered-panel">
+        <div className="selected-avatar selected-avatar--large">{player.avatar}</div>
+        <h1>{player.nickname}</h1>
+        <p>Sei dentro! Aspetta che l'host avvii la raccolta risposte...</p>
+        <span className="status-pill">Sessione {session.code}</span>
+      </section>
+    </div>
+  );
+
+  // Reveal già iniziato o sessione terminata
+  if (session.status === 'revealing' || session.status === 'finished') return (
+    <div className="app-shell player-shell">
+      <section className="party-panel centered-panel">
+        <div className="selected-avatar selected-avatar--large">{player.avatar}</div>
+        <h1>{player.nickname}</h1>
+        <p>{session.status === 'finished' ? 'Gioco terminato, grazie!' : 'Il reveal è in corso sul grande schermo!'}</p>
+        <span className={`status-pill${session.status === 'revealing' ? ' status-pill--active' : ''}`}>Sessione {session.code}</span>
+      </section>
+    </div>
+  );
+
   return (
     <div className="app-shell player-shell">
       <section className="party-panel party-panel--wide" style={{ maxWidth: '700px' }}>
@@ -214,7 +247,7 @@ export function PlayerJoinScreen({ sessionCode }: { sessionCode: string }) {
             <h1>Racconta qualcosa di inaspettato</h1>
           </div>
         </div>
-        
+
         <form className="answers-form" onSubmit={handleSubmitAnswers}>
           {session.questions.map((q, index) => (
             <label key={`${session.code}-${index}`} className="answer-card">
