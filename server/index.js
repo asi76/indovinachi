@@ -95,6 +95,11 @@ function randomItem(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
+function nextDiscoSpin(current = 0) {
+  const value = Number.isFinite(current) ? Number(current) : 0;
+  return (value + 1) % 9999999;
+}
+
 function normalizeQuestions(value) {
   return Array.isArray(value)
     ? value.map((item) => String(item || '').trim()).filter(Boolean).slice(0, 24)
@@ -329,7 +334,7 @@ async function startRevealForSession(pocketBase, sessionRecord) {
     currentQuestionText: firstQuestion.prompt,
     currentAnswerText: firstAnswer?.text || '',
     revealPhase: 'answer',
-    discoSpin: Date.now(),
+    discoSpin: nextDiscoSpin(sessionRecord.discoSpin),
   });
 }
 
@@ -499,7 +504,7 @@ app.post('/api/sessions/:code/reveal/question', requireRemoteSession, async (req
         currentQuestionText: queue[nextIndex].prompt,
         currentAnswerText: '',
         revealPhase: 'question',
-        discoSpin: Date.now(),
+        discoSpin: nextDiscoSpin(record.discoSpin),
       });
     }
     const session = await buildSessionView(req.pocketBase, record);
@@ -524,7 +529,7 @@ app.post('/api/sessions/:code/reveal/answer', requireRemoteSession, async (req, 
       currentAnswerIndex: nextIndex,
       currentAnswerText: revealItem.answers[nextIndex].text,
       revealPhase: 'answer',
-      discoSpin: Date.now(),
+      discoSpin: nextDiscoSpin(req.sessionRecord.discoSpin),
     });
     const session = await buildSessionView(req.pocketBase, updated);
     res.json({ session });
