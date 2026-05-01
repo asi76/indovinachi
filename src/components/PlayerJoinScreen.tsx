@@ -122,7 +122,7 @@ export function PlayerJoinScreen({ sessionCode }: { sessionCode: string }) {
     e.preventDefault();
     if (!session || !player) return;
     const normalizedAnswers = session.questions.map((q, index) => ({
-      questionIndex: index, questionText: q, answerText: (answers[index] || '').trim(),
+      questionIndex: index + 1, questionText: q, answerText: (answers[index] || '').trim(),
     }));
     if (normalizedAnswers.some((entry) => entry.answerText.length === 0)) {
       setError('Compila tutte le risposte'); return;
