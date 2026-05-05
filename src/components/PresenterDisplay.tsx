@@ -69,8 +69,8 @@ export function PresenterDisplay({ sessionCode }: { sessionCode: string }) {
     );
   }
 
-  const waitingForEveryone = session.status === 'collecting' && !session.allAnswered;
-  const readyForReveal = (session.status === 'collecting' || session.status === 'ready') && session.allAnswered;
+  const waitingForEveryone = session.status === 'collecting' && session.answeredCount === 0;
+  const readyForReveal = (session.status === 'collecting' || session.status === 'ready') && session.answeredCount > 0;
   const revealRunning = session.status === 'revealing';
   const showJoinQr = !revealRunning && session.status !== 'finished';
   const showReveal = revealRunning || session.status === 'finished';
@@ -111,8 +111,8 @@ export function PresenterDisplay({ sessionCode }: { sessionCode: string }) {
                 <span className="eyebrow">PARTECIPA ORA</span>
                 <h2>Scansiona il QR</h2>
                 <p>{joinUrl(session).replace(/^https?:\/\//, '')}</p>
-                {waitingForEveryone ? <strong>{session.answeredCount}/{session.playerCount} hanno inviato le risposte</strong> : null}
-                {readyForReveal ? <strong>Tutti hanno risposto: puoi avviare il reveal.</strong> : null}
+                {waitingForEveryone ? <strong>La raccolta e aperta: in attesa delle prime risposte.</strong> : null}
+                {readyForReveal ? <strong>{session.answeredCount}/{session.playerCount} hanno risposto: host o telecomando possono avviare il gioco.</strong> : null}
                 {!waitingForEveryone && !readyForReveal ? <strong>In attesa che l'host apra la raccolta.</strong> : null}
               </div>
             </div>

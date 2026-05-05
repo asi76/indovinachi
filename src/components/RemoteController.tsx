@@ -8,8 +8,16 @@ async function fetchRemoteSession(sessionCode: string, token: string): Promise<P
   return payload.session as PublicSessionView;
 }
 
-async function postRemoteAction(sessionCode: string, token: string, action: 'question' | 'answer' | 'finish') {
-  const response = await fetch(`/api/sessions/${sessionCode}/reveal/${action}`, {
+type RemoteAction = 'open-collect' | 'close-collect' | 'question' | 'answer' | 'finish';
+
+function remoteActionPath(sessionCode: string, action: RemoteAction) {
+  if (action === 'open-collect') return `/api/sessions/${sessionCode}/collect/open`;
+  if (action === 'close-collect') return `/api/sessions/${sessionCode}/collect/close`;
+  return `/api/sessions/${sessionCode}/reveal/${action}`;
+}
+
+async function postRemoteAction(sessionCode: string, token: string, action: RemoteAction) {
+  const response = await fetch(remoteActionPath(sessionCode, action), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -51,7 +59,7 @@ export function RemoteController({ sessionCode, token }: { sessionCode: string; 
     };
   }, [sessionCode, token]);
 
-  async function handleAction(action: 'question' | 'answer' | 'finish') {
+  async function handleAction(action: RemoteAction) {
     setBusy(action);
     setError(null);
     try {
@@ -75,12 +83,18 @@ export function RemoteController({ sessionCode, token }: { sessionCode: string; 
     );
   }
 
+  const canOpenCollect = ['draft', 'lobby', 'ready', 'finished'].includes(session.status);
+  const canCloseCollect = session.status === 'collecting' && session.answeredCount > 0;
+  const canRevealQuestion = session.status === 'revealing' || session.answeredCount > 0;
+  const canRevealAnswer = session.status === 'revealing' && Boolean(session.currentQuestionText);
+  const canFinishReveal = session.status === 'revealing' || session.status === 'finished';
+
   return (
     <div className="app-shell remote-shell">
       <section className="party-panel remote-panel">
         <span className="eyebrow">TELECOMANDO</span>
         <h1>{session.code}</h1>
-        <p>Guida l’estrazione della prossima domanda e fai apparire una risposta casuale alla volta.</p>
+        <p>Apri la raccolta, chiudila quando vuoi e poi guida domanda e risposte dal presenter.</p>
 
         <div className="metric-strip metric-strip--single">
           <div className="metric-tile">
@@ -93,13 +107,19 @@ export function RemoteController({ sessionCode, token }: { sessionCode: string; 
           </div>
         </div>
 
-        <button className="party-button party-button--primary remote-button" onClick={() => void handleAction('question')} disabled={busy !== null}>
+        <button className="party-button party-button--secondary remote-button" onClick={() => void handleAction('open-collect')} disabled={busy !== null || !canOpenCollect}>
+          {busy === 'open-collect' ? 'Apro...' : 'Apri raccolta'}
+        </button>
+        <button className="party-button party-button--primary remote-button" onClick={() => void handleAction('close-collect')} disabled={busy !== null || !canCloseCollect}>
+          {busy === 'close-collect' ? 'Avvio...' : 'Chiudi raccolta e avvia gioco'}
+        </button>
+        <button className="party-button party-button--primary remote-button" onClick={() => void handleAction('question')} disabled={busy !== null || !canRevealQuestion}>
           {busy === 'question' ? 'Estrazione...' : 'Prossima domanda'}
         </button>
-        <button className="party-button party-button--ghost remote-button" onClick={() => void handleAction('answer')} disabled={busy !== null}>
+        <button className="party-button party-button--ghost remote-button" onClick={() => void handleAction('answer')} disabled={busy !== null || !canRevealAnswer}>
           {busy === 'answer' ? 'Rivelo...' : 'Mostra risposta casuale'}
         </button>
-        <button className="party-button party-button--ghost remote-button" onClick={() => void handleAction('finish')} disabled={busy !== null}>
+        <button className="party-button party-button--ghost remote-button" onClick={() => void handleAction('finish')} disabled={busy !== null || !canFinishReveal}>
           {busy === 'finish' ? 'Chiudo...' : 'Chiudi reveal'}
         </button>
 

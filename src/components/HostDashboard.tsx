@@ -58,7 +58,8 @@ function QrCanvas({ url }: { url: string }) {
 
 function StatusBadge({ status }: { status: string }) {
   const configs: Record<string, { label: string; variant: string }> = {
-    drafting: { label: 'Bozza', variant: 'default' },
+    draft: { label: 'Bozza', variant: 'default' },
+    lobby: { label: 'Lobby', variant: 'default' },
     collecting: { label: 'Raccolta', variant: 'active' },
     ready: { label: 'Pronto', variant: 'success' },
     revealing: { label: 'Reveal', variant: 'active' },
@@ -71,17 +72,13 @@ function StatusBadge({ status }: { status: string }) {
 
 export function HostDashboard({ authSession }: HostDashboardProps) {
   const [sessions, setSessions] = useState<PublicSessionView[]>([]);
-  const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const [questionDraft, setQuestionDraft] = useState('');
   const [titleDraft, setTitleDraft] = useState('Indovina Chi');
   const [themeDraft, setThemeDraft] = useState('Studio party 70s');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedSession = useMemo(
-    () => sessions.find((s) => s.code === selectedCode) || sessions[0] || null,
-    [selectedCode, sessions],
-  );
+  const selectedSession = useMemo(() => sessions[0] || null, [sessions]);
 
   useEffect(() => {
     let active = true;
@@ -91,7 +88,6 @@ export function HostDashboard({ authSession }: HostDashboardProps) {
         if (!active) return;
         const nextSessions = payload.sessions as PublicSessionView[];
         setSessions(nextSessions);
-        setSelectedCode((c) => c || nextSessions[0]?.code || null);
       } catch (e) {
         if (active) setError(e instanceof Error ? e.message : 'Errore caricamento');
       }
@@ -116,8 +112,7 @@ export function HostDashboard({ authSession }: HostDashboardProps) {
       playUiClick();
       const payload = await authorizedFetch('/api/sessions', { method: 'POST', body: JSON.stringify({}) });
       const created = payload.session as PublicSessionView;
-      setSessions((current) => [created, ...current]);
-      setSelectedCode(created.code);
+      setSessions([created]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Creazione fallita');
     } finally {
@@ -183,7 +178,7 @@ export function HostDashboard({ authSession }: HostDashboardProps) {
   }
 
   const canStartCollect = selectedSession && selectedSession.questions.length > 0;
-  const canStartReveal = selectedSession && selectedSession.allAnswered;
+  const canStartReveal = selectedSession && selectedSession.answeredCount > 0;
 
   return (
     <div className="app-shell host-shell">
@@ -201,25 +196,27 @@ export function HostDashboard({ authSession }: HostDashboardProps) {
       <div className="host-grid">
         <section className="party-panel">
           <div className="panel-row" style={{ marginBottom: '12px' }}>
-            <h3>Sessioni</h3>
-            <button className="party-button party-button--primary" onClick={() => void createSession()} disabled={busy === 'create'}>
-              {busy === 'create' ? '...' : '+ Nuova'}
-            </button>
+            <h3>Sessione attuale</h3>
           </div>
-          <div className="session-list">
-            {sessions.map((session) => (
-              <button key={session.code} type="button" className={`session-card${selectedSession?.code === session.code ? ' is-selected' : ''}`} onClick={() => setSelectedCode(session.code)}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className="session-card__code">{session.code}</span>
-                  <StatusBadge status={session.status} />
-                </div>
-                <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                  {session.answeredCount}/{session.playerCount} risposte
-                </small>
+          {selectedSession ? (
+            <div className="session-card is-selected" style={{ width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="session-card__code">{selectedSession.code}</span>
+                <StatusBadge status={selectedSession.status} />
+              </div>
+              <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                Una sola sessione attiva alla volta. {selectedSession.answeredCount}/{selectedSession.playerCount} risposte
+              </small>
+            </div>
+          ) : (
+            <div className="centered-panel">
+              <h2>Inizializza la sessione</h2>
+              <p>L'app usa una singola sessione di gioco per host.</p>
+              <button className="party-button party-button--primary" onClick={() => void createSession()} disabled={busy === 'create'}>
+                {busy === 'create' ? '...' : 'Crea sessione'}
               </button>
-            ))}
-            {sessions.length === 0 && <p className="muted-text" style={{ textAlign: 'center', padding: '24px' }}>Nessuna sessione attiva</p>}
-          </div>
+            </div>
+          )}
         </section>
 
         <section className="party-panel party-panel--wide">
@@ -269,7 +266,7 @@ export function HostDashboard({ authSession }: HostDashboardProps) {
                   {busy === 'collect' ? '...' : 'Apri Raccolta'}
                 </button>
                 <button className="party-button party-button--secondary" onClick={() => void startReveal()} disabled={busy === 'reveal' || !canStartReveal}>
-                  {busy === 'reveal' ? '...' : 'Avvia Reveal'}
+                  {busy === 'reveal' ? '...' : 'Chiudi raccolta e avvia reveal'}
                 </button>
               </div>
 
@@ -311,8 +308,8 @@ export function HostDashboard({ authSession }: HostDashboardProps) {
             </>
           ) : (
             <div className="centered-panel">
-              <h2>Crea la prima sessione</h2>
-              <p>Appena crei una lobby compaiono QR, domande e telecomando</p>
+              <h2>Crea la sessione</h2>
+              <p>Appena inizializzi la sessione compaiono QR, domande e telecomando.</p>
             </div>
           )}
         </section>

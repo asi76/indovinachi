@@ -106,6 +106,10 @@ function normalizeQuestions(value) {
     : [];
 }
 
+function isSessionActive(status) {
+  return !['finished', 'terminated'].includes(String(status || ''));
+}
+
 async function authenticatePocketBase() {
   if (!PB_ADMIN_EMAIL || !PB_ADMIN_PASSWORD) {
     throw new Error('Missing PocketBase admin credentials');
@@ -183,6 +187,18 @@ async function getSessionByCode(pocketBase, code) {
   return result.items[0] || null;
 }
 
+async function getHostSessions(pocketBase, hostEmail) {
+  return pocketBase.collection(SESSION_COLLECTION).getFullList({
+    filter: `hostEmail="${escapeFilter(hostEmail)}"`,
+    sort: '-updated,-created',
+  });
+}
+
+async function getSingletonHostSession(pocketBase, hostEmail) {
+  const sessions = await getHostSessions(pocketBase, hostEmail);
+  return sessions.find((session) => isSessionActive(session.status)) || sessions[0] || null;
+}
+
 async function getPlayersByCode(pocketBase, code) {
   return pocketBase.collection(PLAYER_COLLECTION).getFullList({
     filter: `sessionCode="${escapeFilter(code)}"`,
@@ -194,6 +210,31 @@ async function getResponsesByCode(pocketBase, code) {
   return pocketBase.collection(RESPONSE_COLLECTION).getFullList({
     filter: `sessionCode="${escapeFilter(code)}"`,
     sort: 'questionIndex',
+  });
+}
+
+async function resetSessionForCollecting(pocketBase, sessionRecord, questions) {
+  const players = await getPlayersByCode(pocketBase, sessionRecord.code);
+  const responses = await getResponsesByCode(pocketBase, sessionRecord.code);
+
+  await Promise.all(responses.map((entry) => pocketBase.collection(RESPONSE_COLLECTION).delete(entry.id)));
+  await Promise.all(players
+    .filter((entry) => entry.submitted || entry.submittedAt)
+    .map((entry) => pocketBase.collection(PLAYER_COLLECTION).update(entry.id, {
+      submitted: false,
+      submittedAt: '',
+    })));
+
+  return pocketBase.collection(SESSION_COLLECTION).update(sessionRecord.id, {
+    status: 'collecting',
+    questions,
+    revealQueue: [],
+    currentQuestionIndex: -1,
+    currentAnswerIndex: -1,
+    currentQuestionText: '',
+    currentAnswerText: '',
+    revealPhase: 'idle',
+    discoSpin: nextDiscoSpin(sessionRecord.discoSpin),
   });
 }
 
@@ -289,11 +330,11 @@ async function startRevealForSession(pocketBase, sessionRecord) {
   if (players.length === 0) {
     throw new Error('Nessun partecipante presente');
   }
-  if (players.some((entry) => !entry.submitted)) {
-    throw new Error('Non tutti hanno ancora inviato le risposte');
-  }
 
   const responses = await getResponsesByCode(pocketBase, sessionRecord.code);
+  if (responses.length === 0) {
+    throw new Error('Nessuna risposta disponibile per il reveal');
+  }
   const grouped = new Map();
   for (const response of responses) {
     const key = Number.isFinite(response.questionIndex) ? response.questionIndex : 0;
@@ -354,9 +395,8 @@ app.post('/api/auth/session', requireAuthorizedHost, async (req, res) => {
 app.get('/api/host/sessions', requireAuthorizedHost, async (req, res) => {
   try {
     const pocketBase = await authenticatePocketBase();
-    const sessions = await pocketBase.collection(SESSION_COLLECTION).getFullList({
-      filter: `hostEmail="${escapeFilter(req.user.email)}"`,
-    });
+    const singleton = await getSingletonHostSession(pocketBase, req.user.email);
+    const sessions = singleton ? [singleton] : [];
     const hydratedResults = await Promise.allSettled(
       sessions.map(async (session) => buildSessionView(pocketBase, session)),
     );
@@ -381,6 +421,11 @@ app.get('/api/host/sessions', requireAuthorizedHost, async (req, res) => {
 app.post('/api/sessions', requireAuthorizedHost, async (req, res) => {
   try {
     const pocketBase = await authenticatePocketBase();
+    const existing = await getSingletonHostSession(pocketBase, req.user.email);
+    if (existing) {
+      const session = await buildSessionView(pocketBase, existing);
+      return res.json({ session });
+    }
     let code = generateCode();
     while (await getSessionByCode(pocketBase, code)) {
       code = generateCode();
@@ -433,15 +478,38 @@ app.post('/api/sessions/:code/start-collecting', requireAuthorizedHost, requireO
     if (questions.length === 0) {
       return res.status(400).json({ error: 'Inserisci almeno una domanda prima di aprire la raccolta' });
     }
-    const updated = await req.pocketBase.collection(SESSION_COLLECTION).update(req.sessionRecord.id, {
-      status: 'collecting',
-      questions,
-    });
+    const updated = await resetSessionForCollecting(req.pocketBase, req.sessionRecord, questions);
     const session = await buildSessionView(req.pocketBase, updated);
     res.json({ session });
   } catch (error) {
     console.error('[startCollecting]', error);
     res.status(500).json({ error: 'Impossibile aprire la raccolta risposte' });
+  }
+});
+
+app.post('/api/sessions/:code/collect/open', requireRemoteSession, async (req, res) => {
+  try {
+    const questions = normalizeQuestions(req.sessionRecord.questions);
+    if (questions.length === 0) {
+      return res.status(400).json({ error: 'Inserisci almeno una domanda prima di aprire la raccolta' });
+    }
+    const updated = await resetSessionForCollecting(req.pocketBase, req.sessionRecord, questions);
+    const session = await buildSessionView(req.pocketBase, updated);
+    res.json({ session });
+  } catch (error) {
+    console.error('[remoteOpenCollect]', error);
+    res.status(500).json({ error: 'Impossibile aprire la raccolta risposte' });
+  }
+});
+
+app.post('/api/sessions/:code/collect/close', requireRemoteSession, async (req, res) => {
+  try {
+    const updated = await startRevealForSession(req.pocketBase, req.sessionRecord);
+    const session = await buildSessionView(req.pocketBase, updated);
+    res.json({ session });
+  } catch (error) {
+    console.error('[remoteCloseCollect]', error);
+    res.status(400).json({ error: error instanceof Error ? error.message : 'Impossibile chiudere la raccolta e avviare il reveal' });
   }
 });
 
