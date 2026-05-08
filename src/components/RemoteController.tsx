@@ -8,11 +8,11 @@ async function fetchRemoteSession(sessionCode: string, token: string): Promise<P
   return payload.session as PublicSessionView;
 }
 
-type RemoteAction = 'open-collect' | 'close-collect' | 'question' | 'answer' | 'finish';
+type RemoteAction = 'open-collect' | 'start-session' | 'question' | 'answer' | 'finish';
 
 function remoteActionPath(sessionCode: string, action: RemoteAction) {
   if (action === 'open-collect') return `/api/sessions/${sessionCode}/collect/open`;
-  if (action === 'close-collect') return `/api/sessions/${sessionCode}/collect/close`;
+  if (action === 'start-session') return `/api/sessions/${sessionCode}/collect/close`;
   return `/api/sessions/${sessionCode}/reveal/${action}`;
 }
 
@@ -84,17 +84,17 @@ export function RemoteController({ sessionCode, token }: { sessionCode: string; 
   }
 
   const canOpenCollect = ['draft', 'lobby', 'ready', 'finished'].includes(session.status);
-  const canCloseCollect = session.status === 'collecting' && session.answeredCount > 0;
+  const canStartSession = (session.status === 'collecting' || session.status === 'ready') && session.answeredCount > 0;
   const canRevealQuestion = session.status === 'revealing' || session.answeredCount > 0;
   const canRevealAnswer = session.status === 'revealing' && Boolean(session.currentQuestionText);
   const canFinishReveal = session.status === 'revealing' || session.status === 'finished';
 
   return (
-    <div className="app-shell remote-shell">
-      <section className="party-panel remote-panel">
-        <span className="eyebrow">TELECOMANDO</span>
+    <div className="app-shell remote-shell remote-shell--quizzone">
+      <section className="party-panel remote-panel remote-panel--quizzone">
+        <span className="eyebrow">Telecomando</span>
         <h1>{session.code}</h1>
-        <p>Apri la raccolta, chiudila quando vuoi e poi guida domanda e risposte dal presenter.</p>
+        <p>Prima apri la raccolta. Quando vuoi partire davvero, premi Inizia sessione e il presenter mostra subito la prima domanda con una risposta casuale.</p>
 
         <div className="metric-strip metric-strip--single">
           <div className="metric-tile">
@@ -110,8 +110,8 @@ export function RemoteController({ sessionCode, token }: { sessionCode: string; 
         <button className="party-button party-button--secondary remote-button" onClick={() => void handleAction('open-collect')} disabled={busy !== null || !canOpenCollect}>
           {busy === 'open-collect' ? 'Apro...' : 'Apri raccolta'}
         </button>
-        <button className="party-button party-button--primary remote-button" onClick={() => void handleAction('close-collect')} disabled={busy !== null || !canCloseCollect}>
-          {busy === 'close-collect' ? 'Avvio...' : 'Chiudi raccolta e avvia gioco'}
+        <button className="party-button party-button--primary remote-button" onClick={() => void handleAction('start-session')} disabled={busy !== null || !canStartSession}>
+          {busy === 'start-session' ? 'Parto...' : 'Inizia sessione'}
         </button>
         <button className="party-button party-button--primary remote-button" onClick={() => void handleAction('question')} disabled={busy !== null || !canRevealQuestion}>
           {busy === 'question' ? 'Estrazione...' : 'Prossima domanda'}

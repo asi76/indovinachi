@@ -69,76 +69,88 @@ export function PresenterDisplay({ sessionCode }: { sessionCode: string }) {
     );
   }
 
-  const waitingForEveryone = session.status === 'collecting' && session.answeredCount === 0;
+  const waitingForLobby = session.status === 'draft' || session.status === 'lobby';
+  const collectingAnswers = session.status === 'collecting';
   const readyForReveal = (session.status === 'collecting' || session.status === 'ready') && session.answeredCount > 0;
   const revealRunning = session.status === 'revealing';
   const showJoinQr = !revealRunning && session.status !== 'finished';
   const showReveal = revealRunning || session.status === 'finished';
 
   return (
-    <div className="app-shell presenter-shell">
-      <div className="presenter-stage">
-        <div className="ambient-orb ambient-orb--left" />
-        <div className="ambient-orb ambient-orb--right" />
-
-        <section className={`presenter-hero${showReveal ? ' presenter-hero--compact' : ''}`}>
-          <span className="eyebrow">SESSIONE {session.code}</span>
-          <h1>{showReveal ? 'Indovina chi?' : session.title}</h1>
-          {!showReveal ? <p>{session.theme}</p> : null}
-          <div className="metric-strip">
-            <div className="metric-tile">
+    <div className="app-shell presenter-shell presenter-shell--quizzone">
+      <div className="presenter-stage presenter-stage--quizzone">
+        <header className={`presenter-hero presenter-hero--quiz${showReveal ? ' presenter-hero--compact' : ''}`}>
+          <div className="presenter-hero__brand">
+            <span className="eyebrow">Sessione {session.code}</span>
+            <h1>{showReveal ? 'Indovina Chi' : session.title}</h1>
+            {!showReveal ? <p>{session.theme}</p> : null}
+          </div>
+          <div className="presenter-scoreboard">
+            <div className="presenter-scoreboard__tile">
               <strong>{session.playerCount}</strong>
-              <span>presenti</span>
+              <span>Presenti</span>
             </div>
-            <div className="metric-tile">
+            <div className="presenter-scoreboard__tile">
               <strong>{session.answeredCount}</strong>
-              <span>hanno risposto</span>
+              <span>Risposte</span>
             </div>
-            <div className="metric-tile">
+            <div className="presenter-scoreboard__tile">
               <strong>{session.questions.length}</strong>
-              <span>domande in coda</span>
+              <span>Domande</span>
             </div>
           </div>
-        </section>
+        </header>
 
-        <section className={`party-panel presenter-panel${showReveal ? ' presenter-panel--reveal' : ''}`}>
+        <section className={`party-panel presenter-panel presenter-panel--quizzone${showReveal ? ' presenter-panel--reveal' : ''}`}>
           {showJoinQr ? (
-            <div className="presenter-join-screen">
-              <div className="presenter-qr-frame">
-                <PresenterQr url={joinUrl(session)} />
+            <div className="presenter-waiting-board">
+              <div className="presenter-waiting-board__qr">
+                <div className="presenter-qr-frame presenter-qr-frame--quizzone">
+                  <PresenterQr url={joinUrl(session)} />
+                </div>
+                <div className="presenter-join-url">{joinUrl(session).replace(/^https?:\/\//, '')}</div>
               </div>
-              <div className="presenter-join-copy">
-                <span className="eyebrow">PARTECIPA ORA</span>
-                <h2>Scansiona il QR</h2>
-                <p>{joinUrl(session).replace(/^https?:\/\//, '')}</p>
-                {waitingForEveryone ? <strong>La raccolta e aperta: in attesa delle prime risposte.</strong> : null}
-                {readyForReveal ? <strong>{session.answeredCount}/{session.playerCount} hanno risposto: host o telecomando possono avviare il gioco.</strong> : null}
-                {!waitingForEveryone && !readyForReveal ? <strong>In attesa che l'host apra la raccolta.</strong> : null}
+
+              <div className="presenter-waiting-board__copy">
+                <span className="eyebrow">Partecipa ora</span>
+                <h2>Scansiona il QR e rispondi dal telefono</h2>
+                {waitingForLobby ? <strong>La lobby e aperta. I giocatori possono entrare e aspettare l'apertura della raccolta.</strong> : null}
+                {collectingAnswers ? <strong>La raccolta e aperta: ogni giocatore compila le sue risposte dal proprio device.</strong> : null}
+                {readyForReveal ? <strong>{session.answeredCount}/{session.playerCount} hanno risposto. Il telecomando puo premere Inizia sessione.</strong> : null}
+
+                <div className="presenter-waiting-cards">
+                  <article className="presenter-info-card">
+                    <span>Stato</span>
+                    <strong>{session.status === 'ready' ? 'Pronto al via' : session.status === 'collecting' ? 'Raccolta attiva' : 'Lobby'}</strong>
+                  </article>
+                  <article className="presenter-info-card">
+                    <span>Obiettivo</span>
+                    <strong>Scoprire chi ha scritto cosa</strong>
+                  </article>
+                </div>
               </div>
             </div>
           ) : null}
 
           {showReveal ? (
-            <div className="reveal-stack">
-              <div className="disco-ball disco-ball--giant is-fast is-revealing">
-                <div className="disco-ball__core" />
-              </div>
-              <article className="reveal-card reveal-card--question">
-                <span className="eyebrow">DOMANDA ESTRATTA</span>
+            <div className="reveal-stack reveal-stack--quizzone">
+              <div className="reveal-stage-badge">ROUND LIVE</div>
+              <article className="reveal-card reveal-card--question reveal-card--quizzone">
+                <span className="eyebrow">Prima domanda</span>
                 <h2>{session.currentQuestionText || 'Pronta per la prossima estrazione'}</h2>
               </article>
-              <article className={`reveal-card reveal-card--answer${session.currentAnswerText ? ' is-visible' : ''}`}>
-                <span className="eyebrow">RISPOSTA CASUALE</span>
-                <p>{session.currentAnswerText || 'Il presenter puo ora far apparire una risposta.'}</p>
+              <article className={`reveal-card reveal-card--answer reveal-card--quizzone${session.currentAnswerText ? ' is-visible' : ''}`}>
+                <span className="eyebrow">Risposta casuale</span>
+                <p>{session.currentAnswerText || 'Il telecomando puo mostrare la prima risposta.'}</p>
               </article>
-              <h2 className="reveal-title">Indovina chi?</h2>
+              <div className="reveal-title">Chi l'ha scritto?</div>
             </div>
           ) : null}
 
           {session.status === 'finished' ? (
             <div className="presenter-callout presenter-callout--finish">
               <h2>Reveal completato</h2>
-              <p>Tutte le domande e tutte le risposte sono state attraversate.</p>
+              <p>Tutte le domande e le risposte della manche sono state mostrate.</p>
             </div>
           ) : null}
         </section>

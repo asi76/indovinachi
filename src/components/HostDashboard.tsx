@@ -24,6 +24,15 @@ function presenterDisplayUrl(session: PublicSessionView) {
   return `${base}/presenter?code=${session.code}`;
 }
 
+function sessionStageCopy(session: PublicSessionView | null) {
+  if (!session) return 'Configura le domande e apri la lobby';
+  if (session.status === 'draft' || session.status === 'lobby') return 'Lobby pronta: i giocatori possono entrare con il QR';
+  if (session.status === 'collecting') return 'Raccolta risposte aperta: i giocatori stanno compilando';
+  if (session.status === 'ready') return 'Tutti hanno risposto: il telecomando puo iniziare la sessione';
+  if (session.status === 'revealing') return 'Sessione in corso sul presenter';
+  return 'Reveal chiuso: puoi riaprire la raccolta per una nuova manche';
+}
+
 async function authorizedFetch(path: string, init?: RequestInit) {
   const token = await auth.currentUser?.getIdToken();
   if (!token) throw new Error('Sessione Google non disponibile');
@@ -157,16 +166,16 @@ export function HostDashboard({ authSession }: HostDashboardProps) {
     }
   }
 
-  async function startReveal() {
+  async function startSession() {
     if (!selectedSession) return;
-    setBusy('reveal');
+    setBusy('start-session');
     setError(null);
     try {
       const payload = await authorizedFetch(`/api/sessions/${selectedSession.code}/start-reveal`, { method: 'POST' });
       const nextSession = payload.session as PublicSessionView;
       setSessions((current) => current.map((entry) => entry.code === nextSession.code ? nextSession : entry));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Errore avvio reveal');
+      setError(e instanceof Error ? e.message : 'Errore avvio sessione');
     } finally {
       setBusy(null);
     }
@@ -178,139 +187,158 @@ export function HostDashboard({ authSession }: HostDashboardProps) {
   }
 
   const canStartCollect = selectedSession && selectedSession.questions.length > 0;
-  const canStartReveal = selectedSession && selectedSession.answeredCount > 0;
+  const canStartSession = selectedSession && selectedSession.answeredCount > 0;
+  const currentStageCopy = sessionStageCopy(selectedSession);
 
   return (
-    <div className="app-shell host-shell">
-      <div className="host-header">
-        <div>
-          <span className="eyebrow">Host Dashboard</span>
-          <h1>Indovina Chi</h1>
+    <div className="app-shell host-shell host-shell--quizzone">
+      <header className="quiz-topbar">
+        <div className="quiz-brand">
+          <span className="quiz-brand__eyebrow">Host Console</span>
+          <h1>Indovina <span>Chi</span></h1>
         </div>
-        <div className="host-header__actions">
-          <span className="status-pill">{authSession.user.name}</span>
+        <div className="quiz-topbar__actions">
+          <span className="quiz-user-chip">{authSession.user.name}</span>
           <button className="party-button party-button--ghost" onClick={() => void handleLogout()}>Logout</button>
         </div>
-      </div>
+      </header>
 
-      <div className="host-grid">
-        <section className="party-panel">
-          <div className="panel-row" style={{ marginBottom: '12px' }}>
-            <h3>Sessione attuale</h3>
+      <section className="quiz-hero">
+        <div className="quiz-hero__copy">
+          <span className="eyebrow">Sessione live</span>
+          <h2>{selectedSession ? selectedSession.title : 'Prepara la tua manche'}</h2>
+          <p>{selectedSession ? currentStageCopy : 'Crea la sessione, inserisci le domande e manda i giocatori sul QR come in Quizzone.'}</p>
+        </div>
+        <div className="quiz-hero__stats">
+          <div className="quiz-stat">
+            <strong>{selectedSession?.playerCount || 0}</strong>
+            <span>Giocatori</span>
           </div>
-          {selectedSession ? (
-            <div className="session-card is-selected" style={{ width: '100%' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className="session-card__code">{selectedSession.code}</span>
-                <StatusBadge status={selectedSession.status} />
-              </div>
-              <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                Una sola sessione attiva alla volta. {selectedSession.answeredCount}/{selectedSession.playerCount} risposte
-              </small>
-            </div>
-          ) : (
-            <div className="centered-panel">
-              <h2>Inizializza la sessione</h2>
-              <p>L'app usa una singola sessione di gioco per host.</p>
-              <button className="party-button party-button--primary" onClick={() => void createSession()} disabled={busy === 'create'}>
-                {busy === 'create' ? '...' : 'Crea sessione'}
-              </button>
-            </div>
-          )}
-        </section>
+          <div className="quiz-stat">
+            <strong>{selectedSession?.answeredCount || 0}</strong>
+            <span>Risposte</span>
+          </div>
+          <div className="quiz-stat">
+            <strong>{selectedSession?.questions.length || 0}</strong>
+            <span>Domande</span>
+          </div>
+        </div>
+      </section>
 
-        <section className="party-panel party-panel--wide">
+      <div className="host-quiz-grid">
+        <aside className="quiz-sidebar">
+          <section className="party-panel quiz-panel">
+            <div className="quiz-panel__header">
+              <h3>Cabina di regia</h3>
+              {selectedSession ? <StatusBadge status={selectedSession.status} /> : null}
+            </div>
+
+            {selectedSession ? (
+              <>
+                <div className="quiz-session-code">{selectedSession.code}</div>
+                <p className="quiz-sidebar__caption">Una sola sessione attiva alla volta. Il telecomando decide quando inizia davvero la partita.</p>
+
+                <div className="quiz-sidebar__actions">
+                  <button className="party-button party-button--primary" onClick={() => void saveConfig()} disabled={busy === 'save'}>
+                    {busy === 'save' ? 'Salvo...' : 'Salva setup'}
+                  </button>
+                  <button className="party-button party-button--secondary" onClick={() => void startCollecting()} disabled={busy === 'collect' || !canStartCollect}>
+                    {busy === 'collect' ? 'Apro...' : 'Apri raccolta'}
+                  </button>
+                  <button className="party-button party-button--secondary" onClick={() => void startSession()} disabled={busy === 'start-session' || !canStartSession}>
+                    {busy === 'start-session' ? 'Avvio...' : 'Inizia sessione'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="centered-panel">
+                <h2>Inizializza</h2>
+                <p>L'app usa una sessione singola per host, come una regia TV.</p>
+                <button className="party-button party-button--primary" onClick={() => void createSession()} disabled={busy === 'create'}>
+                  {busy === 'create' ? 'Creo...' : 'Crea sessione'}
+                </button>
+              </div>
+            )}
+          </section>
+
+          {selectedSession ? (
+            <section className="party-panel quiz-panel">
+              <div className="quiz-panel__header">
+                <h3>Giocatori in sala</h3>
+                <span className="status-pill">{selectedSession.playerCount}</span>
+              </div>
+              <div className="player-list player-list--stacked">
+                {selectedSession.players.map((player) => (
+                  <div key={player.id} className="player-pill player-pill--quizzone">
+                    <span className="player-pill__avatar">{player.avatar}</span>
+                    <span className="player-pill__name">{player.nickname}</span>
+                    <span className={`player-pill__status${player.submitted ? ' is-ready' : ''}`}>{player.submitted ? 'Pronto' : 'In attesa'}</span>
+                  </div>
+                ))}
+                {selectedSession.players.length === 0 ? <p className="muted-text">In attesa dei primi invitati</p> : null}
+              </div>
+            </section>
+          ) : null}
+        </aside>
+
+        <section className="quiz-main">
           {selectedSession ? (
             <>
-              <div className="panel-row">
-                <div>
-                  <span className="eyebrow">Sessione {selectedSession.code}</span>
-                  <h2>{selectedSession.title}</h2>
-                </div>
-                <div className="metric-strip">
-                  <div className="metric-tile">
-                    <span className="metric-tile__value">{selectedSession.playerCount}</span>
-                    <span className="metric-tile__label">Giocatori</span>
-                  </div>
-                  <div className="metric-tile">
-                    <span className="metric-tile__value">{selectedSession.answeredCount}</span>
-                    <span className="metric-tile__label">Risposte</span>
-                  </div>
-                  <div className="metric-tile">
-                    <span className="metric-tile__value">{selectedSession.questions.length}</span>
-                    <span className="metric-tile__label">Domande</span>
+              <section className="party-panel quiz-panel quiz-panel--editor">
+                <div className="quiz-panel__header">
+                  <div>
+                    <span className="eyebrow">Setup partita</span>
+                    <h2>{selectedSession.title}</h2>
                   </div>
                 </div>
-              </div>
 
-              <div className="editor-grid">
-                <div className="field-group">
-                  <label>Titolo Evento</label>
-                  <input className="party-input" value={titleDraft} onChange={(e) => setTitleDraft(e.target.value)} />
+                <div className="editor-grid">
+                  <div className="field-group">
+                    <label>Titolo evento</label>
+                    <input className="party-input" value={titleDraft} onChange={(e) => setTitleDraft(e.target.value)} />
+                  </div>
+                  <div className="field-group">
+                    <label>Tema visuale</label>
+                    <input className="party-input" value={themeDraft} onChange={(e) => setThemeDraft(e.target.value)} />
+                  </div>
+                  <div className="field-group field-group--full">
+                    <label>Domande, una per riga</label>
+                    <textarea className="party-textarea" rows={6} value={questionDraft} onChange={(e) => setQuestionDraft(e.target.value)} placeholder={"Qual e una tua abitudine segreta?\nQual e il talento piu inatteso che hai?"} />
+                  </div>
                 </div>
-                <div className="field-group">
-                  <label>Tema Visuale</label>
-                  <input className="party-input" value={themeDraft} onChange={(e) => setThemeDraft(e.target.value)} />
-                </div>
-                <div className="field-group field-group--full">
-                  <label>Domande (una per riga)</label>
-                  <textarea className="party-textarea" rows={6} value={questionDraft} onChange={(e) => setQuestionDraft(e.target.value)} placeholder="Qual ?? una tua abitudine segreta?\nQual ?? il talento pi?? inatteso che hai?" />
-                </div>
-              </div>
+              </section>
 
-              <div className="panel-actions">
-                <button className="party-button party-button--primary" onClick={() => void saveConfig()} disabled={busy === 'save'}>
-                  {busy === 'save' ? 'Salvo...' : 'Salva'}
-                </button>
-                <button className="party-button party-button--secondary" onClick={() => void startCollecting()} disabled={busy === 'collect' || !canStartCollect}>
-                  {busy === 'collect' ? '...' : 'Apri Raccolta'}
-                </button>
-                <button className="party-button party-button--secondary" onClick={() => void startReveal()} disabled={busy === 'reveal' || !canStartReveal}>
-                  {busy === 'reveal' ? '...' : 'Chiudi raccolta e avvia reveal'}
-                </button>
-              </div>
-
-              {selectedSession.status === 'revealing' || selectedSession.status === 'finished' ? (
-                <div className="presenter-callout presenter-callout--ready">
-                  <h2>Reveal in corso</h2>
-                  <p>Il QR partecipanti e nascosto: sul display presenter gira la disco ball con domanda e risposta estratte.</p>
+              <section className="party-panel quiz-panel">
+                <div className="quiz-panel__header">
+                  <div>
+                    <span className="eyebrow">Accessi rapidi</span>
+                    <h3>Schermi di gioco</h3>
+                  </div>
                 </div>
-              ) : (
-                <div className="qr-grid">
-                  <article className="qr-card">
+                <div className="qr-grid qr-grid--quizzone">
+                  <article className="qr-card qr-card--quizzone">
                     <h3>Partecipanti</h3>
                     <QrCanvas url={joinUrl(selectedSession)} />
                     <a href={joinUrl(selectedSession)} target="_blank" rel="noreferrer">{joinUrl(selectedSession).replace(/^https?:\/\//, '')}</a>
                   </article>
-                  <article className="qr-card">
+                  <article className="qr-card qr-card--quizzone">
                     <h3>Display</h3>
                     <QrCanvas url={presenterDisplayUrl(selectedSession)} />
                     <a href={presenterDisplayUrl(selectedSession)} target="_blank" rel="noreferrer">{presenterDisplayUrl(selectedSession).replace(/^https?:\/\//, '')}</a>
                   </article>
-                  <article className="qr-card">
+                  <article className="qr-card qr-card--quizzone">
                     <h3>Telecomando</h3>
                     <QrCanvas url={remoteUrl(selectedSession)} />
                     <a href={remoteUrl(selectedSession)} target="_blank" rel="noreferrer">{remoteUrl(selectedSession).replace(/^https?:\/\//, '')}</a>
                   </article>
                 </div>
-              )}
-
-              <div className="player-list">
-                {selectedSession.players.map((player) => (
-                  <div key={player.id} className="player-pill">
-                    <span className="player-pill__avatar">{player.avatar}</span>
-                    <span className="player-pill__name">{player.nickname}</span>
-                    <span className="player-pill__status">{player.submitted ? '???' : '...'}</span>
-                  </div>
-                ))}
-                {selectedSession.players.length === 0 && <p className="muted-text">In attesa dei primi invitati</p>}
-              </div>
+              </section>
             </>
           ) : (
-            <div className="centered-panel">
+            <section className="party-panel centered-panel quiz-panel">
               <h2>Crea la sessione</h2>
-              <p>Appena inizializzi la sessione compaiono QR, domande e telecomando.</p>
-            </div>
+              <p>Appena la inizializzi compaiono QR, display e telecomando.</p>
+            </section>
           )}
         </section>
       </div>
