@@ -13,9 +13,9 @@ const distDir = path.join(rootDir, 'dist');
 
 const PORT = Number(process.env.PORT || 3000);
 const APP_URL = process.env.APP_URL || 'https://indovinachi.asigo.cc';
-const PB_URL = process.env.POCKETBASE_URL || process.env.VITE_POCKETBASE_URL || 'https://pb.indovinachi.asigo.cc';
-const PB_ADMIN_EMAIL = process.env.POCKETBASE_ADMIN_EMAIL || '';
-const PB_ADMIN_PASSWORD = process.env.POCKETBASE_ADMIN_PASSWORD || '';
+const PB_URL = process.env.POCKETBASE_URL || process.env.PB_URL || process.env.VITE_POCKETBASE_URL || 'https://pb.indovinachi.asigo.cc';
+const PB_ADMIN_EMAIL = process.env.POCKETBASE_ADMIN_EMAIL || process.env.PB_ADMIN_EMAIL || process.env.INDOVINACHI_PB_ADMIN_EMAIL || '';
+const PB_ADMIN_PASSWORD = process.env.POCKETBASE_ADMIN_PASSWORD || process.env.PB_ADMIN_PASSWORD || process.env.INDOVINACHI_PB_ADMIN_PASSWORD || '';
 const CENTRAL_AUTH_PB_URL = process.env.CENTRAL_AUTH_PB_URL || 'https://pb.theparty.asigo.cc';
 const CENTRAL_AUTH_PB_ADMIN_EMAIL = process.env.CENTRAL_AUTH_PB_ADMIN_EMAIL || PB_ADMIN_EMAIL;
 const CENTRAL_AUTH_PB_ADMIN_PASSWORD = process.env.CENTRAL_AUTH_PB_ADMIN_PASSWORD || PB_ADMIN_PASSWORD;
@@ -96,6 +96,13 @@ function randomItem(list) {
 function nextDiscoSpin(current = 0) {
   const value = Number.isFinite(current) ? Number(current) : 0;
   return (value + 1) % 9999999;
+}
+
+function isMissingPbAdminCredentials(error) {
+  return error instanceof Error && (
+    error.message === 'Missing PocketBase admin credentials'
+    || error.message === 'Missing central auth PocketBase admin credentials'
+  );
 }
 
 function normalizeQuestions(value) {
@@ -416,6 +423,9 @@ app.get('/api/host/sessions', requireAuthorizedHost, async (req, res) => {
     res.json({ sessions: hydrated });
   } catch (error) {
     console.error('[hostSessions]', error);
+    if (isMissingPbAdminCredentials(error)) {
+      return res.status(503).json({ error: 'PocketBase admin non configurato sul server' });
+    }
     res.status(500).json({ error: 'Impossibile caricare le sessioni' });
   }
 });
@@ -454,6 +464,9 @@ app.post('/api/sessions', requireAuthorizedHost, async (req, res) => {
     res.status(201).json({ session });
   } catch (error) {
     console.error('[createSession]', error);
+    if (isMissingPbAdminCredentials(error)) {
+      return res.status(503).json({ error: 'PocketBase admin non configurato sul server' });
+    }
     res.status(500).json({ error: 'Impossibile creare la sessione' });
   }
 });
