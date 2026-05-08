@@ -197,9 +197,13 @@ async function getSessionByCode(pocketBase, code) {
 }
 
 async function getHostSessions(pocketBase, hostEmail) {
-  return pocketBase.collection(SESSION_COLLECTION).getFullList({
+  const sessions = await pocketBase.collection(SESSION_COLLECTION).getFullList({
     filter: `hostEmail="${escapeFilter(hostEmail)}"`,
-    sort: '-updated,-created',
+  });
+  return [...sessions].sort((left, right) => {
+    const leftUpdated = Date.parse(left.updated || left.created || '') || 0;
+    const rightUpdated = Date.parse(right.updated || right.created || '') || 0;
+    return rightUpdated - leftUpdated;
   });
 }
 
@@ -209,16 +213,27 @@ async function getSingletonHostSession(pocketBase, hostEmail) {
 }
 
 async function getPlayersByCode(pocketBase, code) {
-  return pocketBase.collection(PLAYER_COLLECTION).getFullList({
+  const players = await pocketBase.collection(PLAYER_COLLECTION).getFullList({
     filter: `sessionCode="${escapeFilter(code)}"`,
-    sort: 'joinedAt',
+  });
+  return [...players].sort((left, right) => {
+    const leftJoined = Date.parse(left.joinedAt || left.created || '') || 0;
+    const rightJoined = Date.parse(right.joinedAt || right.created || '') || 0;
+    return leftJoined - rightJoined;
   });
 }
 
 async function getResponsesByCode(pocketBase, code) {
-  return pocketBase.collection(RESPONSE_COLLECTION).getFullList({
+  const responses = await pocketBase.collection(RESPONSE_COLLECTION).getFullList({
     filter: `sessionCode="${escapeFilter(code)}"`,
-    sort: 'questionIndex',
+  });
+  return [...responses].sort((left, right) => {
+    const leftQuestionIndex = Number.isFinite(left.questionIndex) ? Number(left.questionIndex) : 0;
+    const rightQuestionIndex = Number.isFinite(right.questionIndex) ? Number(right.questionIndex) : 0;
+    if (leftQuestionIndex !== rightQuestionIndex) return leftQuestionIndex - rightQuestionIndex;
+    const leftSubmitted = Date.parse(left.submittedAt || left.created || '') || 0;
+    const rightSubmitted = Date.parse(right.submittedAt || right.created || '') || 0;
+    return leftSubmitted - rightSubmitted;
   });
 }
 
