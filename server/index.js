@@ -58,8 +58,6 @@ function ensureFirebaseAdmin() {
   throw new Error('Missing Firebase Admin credentials');
 }
 
-ensureFirebaseAdmin();
-
 const pb = new PocketBase(PB_URL);
 pb.autoCancellation(false);
 const centralAuthPb = new PocketBase(CENTRAL_AUTH_PB_URL);
@@ -150,6 +148,7 @@ async function getProfileRole(email) {
 
 async function requireAuthorizedHost(req, res, next) {
   try {
+    ensureFirebaseAdmin();
     const header = req.headers.authorization || '';
     const token = header.startsWith('Bearer ') ? header.slice(7) : '';
     if (!token) {
@@ -176,6 +175,9 @@ async function requireAuthorizedHost(req, res, next) {
     next();
   } catch (error) {
     console.error('[auth]', error);
+    if (error instanceof Error && error.message === 'Missing Firebase Admin credentials') {
+      return res.status(503).json({ error: 'Firebase Admin non configurato sul server' });
+    }
     res.status(401).json({ error: 'Autenticazione Firebase non valida' });
   }
 }

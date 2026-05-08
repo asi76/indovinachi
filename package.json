@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "server": "node server/index.js",
-    "start": "node server/index.js",
+    "server": "node --env-file-if-exists=.env --env-file-if-exists=.env.local server/index.js",
+    "start": "node --env-file-if-exists=.env --env-file-if-exists=.env.local server/index.js",
     "sync:pb-schema": "node scripts/sync-pocketbase-schema.js"
   },
   "dependencies": {
