@@ -1,63 +1,104 @@
-import { useEffect, useMemo, useState } from 'react';
-import { AuthGate } from './components/AuthGate';
-import { HostDashboard } from './components/HostDashboard';
-import { PlayerJoinScreen } from './components/PlayerJoinScreen';
-import { PresenterDisplay } from './components/PresenterDisplay';
-import { RemoteController } from './components/RemoteController';
-import type { AuthSession } from './types';
+import type { ReactNode } from 'react';
+import { useEffect } from 'react';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { I18nProvider } from './contexts/I18nContext';
+import Home from './pages/Home';
+import HostAuth from './pages/host/Auth';
+import HostDashboard from './pages/host/Dashboard';
+import GameHost from './pages/host/GameHost';
+import Join from './pages/player/Join';
+import Nickname from './pages/player/Nickname';
+import GamePlayer from './pages/player/GamePlayer';
+import RemoteController from './pages/remote/Controller';
 
-export default function App() {
-  const [authSession, setAuthSession] = useState<AuthSession | null>(null);
-  const [showSplash, setShowSplash] = useState(true);
+function HostGuard({ children }: { children: ReactNode }) {
+  const { loading, data } = useAuth();
 
-  const joinCode = useMemo(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('join');
-  }, []);
-
-  const presenterCode = useMemo(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('presenter');
-  }, []);
-
-  const presenterScreenCode = useMemo(() => {
-    if (window.location.pathname !== '/presenter') return null;
-    const params = new URLSearchParams(window.location.search);
-    return params.get('code') || params.get('s') || params.get('session');
-  }, []);
-
-  const presenterToken = useMemo(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('token');
-  }, []);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setShowSplash(false), 1500);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  if (showSplash) {
+  if (loading) {
     return (
-      <div className="splash-shell">
-        <div className="splash-mark">
-          <div style={{ fontSize: '4rem', marginBottom: '16px' }}>🎭</div>
-          <span className="splash-mark__eyebrow">The Party Presenta</span>
-          <h1>Indovina Chi</h1>
-          <p>Icebreaker festoso per scoprire qualcosa di inaspettato</p>
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '24px' }}>
-            <div style={{ width: '8px', height: '8px', background: '#ff6b9d', borderRadius: '50%', animation: 'bounce 1.4s ease-in-out infinite both' }} />
-            <div style={{ width: '8px', height: '8px', background: '#ff6b9d', borderRadius: '50%', animation: 'bounce 1.4s ease-in-out infinite both', animationDelay: '-0.16s' }} />
-            <div style={{ width: '8px', height: '8px', background: '#ff6b9d', borderRadius: '50%', animation: 'bounce 1.4s ease-in-out infinite both', animationDelay: '-0.32s' }} />
-          </div>
-          <style>{`@keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }`}</style>
-        </div>
+      <div className="min-h-screen bg-purple-900 flex items-center justify-center text-white font-black text-xl">
+        Controllo accesso host...
       </div>
     );
   }
 
-  if (joinCode) return <PlayerJoinScreen sessionCode={joinCode.toUpperCase()} />;
-  if (presenterScreenCode) return <PresenterDisplay sessionCode={presenterScreenCode.toUpperCase()} />;
-  if (presenterCode) return <RemoteController sessionCode={presenterCode.toUpperCase()} token={presenterToken || ''} />;
-  if (!authSession) return <AuthGate onAuthorized={setAuthSession} />;
-  return <HostDashboard authSession={authSession} />;
+  return data ? children : <Navigate to="/host/login" replace />;
+}
+
+function LegacyRootRedirect() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const join = params.get('join');
+    const presenter = params.get('presenter');
+    const token = params.get('token');
+
+    if (join) {
+      navigate(`/play/${join.toUpperCase()}`, { replace: true });
+      return;
+    }
+
+    if (presenter) {
+      const search = token ? `?token=${encodeURIComponent(token)}` : '';
+      navigate(`/remote/${presenter.toUpperCase()}${search}`, { replace: true });
+    }
+  }, [location.search, navigate]);
+
+  return <Home />;
+}
+
+function PresenterLegacyRoute() {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const code = params.get('code') || params.get('session') || params.get('s');
+
+  if (!code) return <Navigate to="/" replace />;
+  return <GameHost sessionCode={code.toUpperCase()} />;
+}
+
+function HostGameRoute() {
+  const params = useParams();
+  if (!params.code) return <Navigate to="/host" replace />;
+  return <GameHost sessionCode={params.code.toUpperCase()} />;
+}
+
+function RemoteRoute() {
+  const params = useParams();
+  const location = useLocation();
+  const token = new URLSearchParams(location.search).get('token') || '';
+
+  if (!params.code) return <Navigate to="/" replace />;
+  return <RemoteController sessionCode={params.code.toUpperCase()} token={token} />;
+}
+
+function AppRoutes() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<LegacyRootRedirect />} />
+        <Route path="/host/login" element={<HostAuth />} />
+        <Route path="/host" element={<HostGuard><HostDashboard /></HostGuard>} />
+        <Route path="/host/game/:code" element={<HostGuard><HostGameRoute /></HostGuard>} />
+        <Route path="/presenter" element={<PresenterLegacyRoute />} />
+        <Route path="/remote/:code" element={<RemoteRoute />} />
+        <Route path="/play" element={<Join />} />
+        <Route path="/play/:code" element={<Nickname />} />
+        <Route path="/play/:code/game/:playerId" element={<GamePlayer />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default function App() {
+  return (
+    <I18nProvider>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </I18nProvider>
+  );
 }
