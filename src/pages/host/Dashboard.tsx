@@ -3,12 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion } from 'framer-motion';
 import { signOutFromGoogle } from '../../lib/firebase';
-import { createHostSession, fetchHostSessions, openCollecting, saveHostSessionConfig, startSession } from '../../lib/sessionApi';
+import { addQuestion, createHostSession, fetchHostSessions, fetchQuestionBank, importQuestions, openCollecting, saveHostSessionConfig, startSession } from '../../lib/sessionApi';
 import { joinUrl, presenterUrl, remoteUrl, sessionStatusLabel } from '../../lib/game';
-import type { PublicSessionView } from '../../types';
+import type { MultilingualQuestion, PublicSessionView } from '../../types';
 
 function parseLines(value: string) {
   return value.split('\n').map((entry) => entry.trim()).filter(Boolean);
+}
+
+function parseJsonQuestions(value: string) {
+  const parsed = JSON.parse(value);
+  const list = Array.isArray(parsed) ? parsed : parsed.questions;
+  if (!Array.isArray(list)) throw new Error('Il JSON deve contenere un array di domande');
+  return list.map((entry) => ({
+    IT: String(entry.IT || entry.it || '').trim(),
+    EN: String(entry.EN || entry.en || '').trim(),
+    SV: String(entry.SV || entry.sv || '').trim(),
+  })).filter((entry) => entry.IT && entry.EN && entry.SV);
 }
 
 export default function HostDashboard() {
@@ -19,6 +30,10 @@ export default function HostDashboard() {
   const [titleDraft, setTitleDraft] = useState('Indovina Chi');
   const [themeDraft, setThemeDraft] = useState('Party room viola, luci da quiz show, reveal teatrale');
   const [questionDraft, setQuestionDraft] = useState('');
+  const [questionCountDraft, setQuestionCountDraft] = useState(3);
+  const [questionBank, setQuestionBank] = useState<MultilingualQuestion[]>([]);
+  const [manualQuestion, setManualQuestion] = useState({ IT: '', EN: '', SV: '' });
+  const [jsonDraft, setJsonDraft] = useState('');
 
   const session = useMemo(() => sessions[0] || null, [sessions]);
 
@@ -44,10 +59,25 @@ export default function HostDashboard() {
   }, []);
 
   useEffect(() => {
+    let active = true;
+    fetchQuestionBank()
+      .then((questions) => {
+        if (active) setQuestionBank(questions);
+      })
+      .catch((loadError) => {
+        if (active) setError(loadError instanceof Error ? loadError.message : 'Errore caricamento domande');
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!session) return;
     setTitleDraft(session.title);
     setThemeDraft(session.theme);
     setQuestionDraft(session.questions.join('\n'));
+    setQuestionCountDraft(session.questionCount || 3);
   }, [session?.id]);
 
   async function handleCreate() {
@@ -72,10 +102,41 @@ export default function HostDashboard() {
         title: titleDraft.trim() || 'Indovina Chi',
         theme: themeDraft.trim(),
         questions: parseLines(questionDraft),
+        questionCount: questionCountDraft,
       });
       setSessions([updated]);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Salvataggio fallito');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleAddManualQuestion() {
+    setBusy('question');
+    setError('');
+    try {
+      const created = await addQuestion(manualQuestion);
+      setQuestionBank((current) => [created, ...current]);
+      setManualQuestion({ IT: '', EN: '', SV: '' });
+    } catch (questionError) {
+      setError(questionError instanceof Error ? questionError.message : 'Domanda non salvata');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleImportQuestions() {
+    setBusy('import');
+    setError('');
+    try {
+      const questions = parseJsonQuestions(jsonDraft);
+      if (questions.length === 0) throw new Error('Nessuna domanda valida trovata nel JSON');
+      await importQuestions(questions);
+      setJsonDraft('');
+      setQuestionBank(await fetchQuestionBank());
+    } catch (importError) {
+      setError(importError instanceof Error ? importError.message : 'Import JSON fallito');
     } finally {
       setBusy(null);
     }
@@ -109,8 +170,9 @@ export default function HostDashboard() {
     }
   }
 
-  const canCollect = Boolean(session && parseLines(questionDraft).length > 0);
+  const canCollect = Boolean(session && (questionBank.length > 0 || parseLines(questionDraft).length > 0));
   const canStart = Boolean(session && session.answeredCount > 0);
+  const canAddManual = Boolean(manualQuestion.IT.trim() && manualQuestion.EN.trim() && manualQuestion.SV.trim());
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -176,13 +238,61 @@ export default function HostDashboard() {
               </div>
 
               <div className="mb-5">
-                <label className="block text-xs font-black tracking-widest text-gray-500 mb-2">Domande</label>
+                <label className="block text-xs font-black tracking-widest text-gray-500 mb-2">Domande per giocatore al check-in</label>
+                <input
+                  className="input-field max-w-[180px]"
+                  type="number"
+                  min={1}
+                  max={24}
+                  value={questionCountDraft}
+                  onChange={(e) => setQuestionCountDraft(Math.max(1, Math.min(24, Number(e.target.value) || 1)))}
+                />
+              </div>
+
+              <div className="mb-5">
+                <label className="block text-xs font-black tracking-widest text-gray-500 mb-2">Domande legacy sessione</label>
                 <textarea
                   className="input-field min-h-[180px]"
                   value={questionDraft}
                   onChange={(e) => setQuestionDraft(e.target.value)}
                   placeholder={"Qual e una tua abitudine segreta?\nChe talento nessuno si aspetta da te?\nQual e il tuo guilty pleasure?"}
                 />
+              </div>
+
+              <div className="border-t border-gray-100 pt-5 mt-5">
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <h4 className="text-xl font-black text-gray-800">Amministrazione domande</h4>
+                  <span className="text-sm font-black text-purple-700 bg-purple-50 px-3 py-1 rounded-full">{questionBank.length} nel database</span>
+                </div>
+                <div className="grid md:grid-cols-3 gap-3 mb-3">
+                  <textarea className="input-field min-h-[92px]" placeholder="IT" value={manualQuestion.IT} onChange={(e) => setManualQuestion((current) => ({ ...current, IT: e.target.value }))} />
+                  <textarea className="input-field min-h-[92px]" placeholder="EN" value={manualQuestion.EN} onChange={(e) => setManualQuestion((current) => ({ ...current, EN: e.target.value }))} />
+                  <textarea className="input-field min-h-[92px]" placeholder="SV" value={manualQuestion.SV} onChange={(e) => setManualQuestion((current) => ({ ...current, SV: e.target.value }))} />
+                </div>
+                <button onClick={() => void handleAddManualQuestion()} className="btn-white mb-5" disabled={busy === 'question' || !canAddManual}>
+                  {busy === 'question' ? 'Aggiungo...' : 'Aggiungi domanda'}
+                </button>
+
+                <label className="block text-xs font-black tracking-widest text-gray-500 mb-2">Import JSON multilingua</label>
+                <input
+                  className="block w-full text-sm font-semibold text-gray-600 mb-3"
+                  type="file"
+                  accept="application/json,.json"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    void file.text().then(setJsonDraft);
+                  }}
+                />
+                <textarea
+                  className="input-field min-h-[130px] mb-3"
+                  value={jsonDraft}
+                  onChange={(e) => setJsonDraft(e.target.value)}
+                  placeholder={'[{"IT":"Domanda...","EN":"Question...","SV":"Fraga..."}]'}
+                />
+                <button onClick={() => void handleImportQuestions()} className="btn-white" disabled={busy === 'import' || !jsonDraft.trim()}>
+                  {busy === 'import' ? 'Importo...' : 'Importa JSON'}
+                </button>
               </div>
 
               <div className="flex flex-wrap gap-3">
@@ -229,7 +339,7 @@ export default function HostDashboard() {
                     <div className="text-xs font-black text-gray-500 tracking-widest">RISPOSTE</div>
                   </div>
                   <div className="bg-gray-50 rounded-2xl p-4 text-center">
-                    <div className="text-3xl font-black text-gray-900">{session.questions.length}</div>
+                    <div className="text-3xl font-black text-gray-900">{session.questionCount}</div>
                     <div className="text-xs font-black text-gray-500 tracking-widest">DOMANDE</div>
                   </div>
                 </div>

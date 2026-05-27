@@ -31,6 +31,8 @@
       { "name": "theme", "type": "text", "required": false, "max": 280 },
       { "name": "status", "type": "select", "required": true, "maxSelect": 1, "values": ["draft", "lobby", "collecting", "ready", "revealing", "finished", "terminated"] },
       { "name": "questions", "type": "json", "required": false },
+      { "name": "questionCount", "type": "number", "required": false, "min": 1, "max": 24, "noDecimal": true },
+      { "name": "assignedQuestionIds", "type": "json", "required": false },
       { "name": "presenterToken", "type": "text", "required": true, "max": 64 },
       { "name": "remoteToken", "type": "text", "required": true, "max": 64 },
       { "name": "revealQueue", "type": "json", "required": false },
@@ -55,6 +57,7 @@
       { "name": "sessionCode", "type": "text", "required": true, "min": 6, "max": 6 },
       { "name": "nickname", "type": "text", "required": true, "max": 28 },
       { "name": "avatar", "type": "text", "required": true, "max": 8 },
+      { "name": "questions", "type": "json", "required": false },
       { "name": "submitted", "type": "bool", "required": false },
       { "name": "joinedAt", "type": "date", "required": true },
       { "name": "submittedAt", "type": "date", "required": false }
@@ -74,6 +77,7 @@
       { "name": "playerId", "type": "text", "required": true, "max": 32 },
       { "name": "playerNickname", "type": "text", "required": true, "max": 28 },
       { "name": "playerAvatar", "type": "text", "required": true, "max": 8 },
+      { "name": "questionId", "type": "text", "required": false, "max": 64 },
       { "name": "questionIndex", "type": "number", "required": true, "min": 0, "max": 500, "noDecimal": true },
       { "name": "questionText", "type": "text", "required": true, "max": 500 },
       { "name": "answerText", "type": "text", "required": true, "max": 1000 },
@@ -82,6 +86,26 @@
     "indexes": [
       "CREATE INDEX idx_icebreaker_responses_session_code ON icebreaker_responses (sessionCode)",
       "CREATE INDEX idx_icebreaker_responses_player ON icebreaker_responses (playerId)"
+    ]
+  },
+  {
+    "name": "icebreaker_questions",
+    "type": "base",
+    "listRule": null,
+    "viewRule": null,
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      { "name": "externalId", "type": "text", "required": false, "max": 64 },
+      { "name": "IT", "type": "text", "required": true, "max": 500 },
+      { "name": "EN", "type": "text", "required": true, "max": 500 },
+      { "name": "SV", "type": "text", "required": true, "max": 500 },
+      { "name": "active", "type": "bool", "required": false }
+    ],
+    "indexes": [
+      "CREATE UNIQUE INDEX idx_icebreaker_questions_it_en_sv ON icebreaker_questions (IT, EN, SV)",
+      "CREATE INDEX idx_icebreaker_questions_active ON icebreaker_questions (active)"
     ]
   }
 ]

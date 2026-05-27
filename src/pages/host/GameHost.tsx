@@ -20,11 +20,12 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
 
   useEffect(() => {
     if (!sessionCode) return;
+    const currentCode = sessionCode;
     let active = true;
 
     async function load() {
       try {
-        const next = await fetchPublicSession(sessionCode);
+        const next = await fetchPublicSession(currentCode);
         if (!active) return;
         setSession(next);
       } catch (loadError) {

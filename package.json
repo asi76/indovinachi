@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "server": "node --env-file-if-exists=.env --env-file-if-exists=.env.local server/index.js",
     "start": "node --env-file-if-exists=.env --env-file-if-exists=.env.local server/index.js",
-    "sync:pb-schema": "node scripts/sync-pocketbase-schema.js"
+    "sync:pb-schema": "node scripts/sync-pocketbase-schema.js",
+    "import:default-questions": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/import-default-questions.js"
   },
   "dependencies": {
     "autoprefixer": "^10.5.0",

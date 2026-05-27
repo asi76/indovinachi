@@ -13,6 +13,15 @@ export interface RevealQuestionEntry {
   answers: RevealAnswerEntry[];
 }
 
+export type QuestionLanguage = 'IT' | 'EN' | 'SV';
+
+export interface MultilingualQuestion {
+  id: string;
+  IT: string;
+  EN: string;
+  SV: string;
+}
+
 export interface IcebreakerSessionRecord {
   id: string;
   code: string;
@@ -22,6 +31,8 @@ export interface IcebreakerSessionRecord {
   theme: string;
   status: SessionStatus;
   questions: string[];
+  questionCount: number;
+  assignedQuestionIds: string[];
   presenterToken: string;
   remoteToken: string;
   revealQueue: RevealQuestionEntry[];
@@ -47,6 +58,7 @@ export interface IcebreakerPlayerRecord {
   sessionCode: string;
   nickname: string;
   avatar: string;
+  questions?: MultilingualQuestion[];
   submitted: boolean;
   joinedAt: string;
   submittedAt?: string | null;

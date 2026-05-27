@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { clearPlayerToken, loadPlayerToken } from '../../lib/game';
-import { fetchPlayer, fetchPublicSession, submitPlayerResponses } from '../../lib/sessionApi';
+import { fetchPlayer, fetchPublicSession, resolveQuestionText, submitPlayerResponses } from '../../lib/sessionApi';
 import type { IcebreakerPlayerRecord, PublicSessionView } from '../../types';
 
 export default function GamePlayer() {
@@ -22,13 +22,15 @@ export default function GamePlayer() {
       return;
     }
 
+    const currentCode = code.toUpperCase();
+    const currentPlayerId = playerId;
     let active = true;
 
     async function load() {
       try {
         const [nextSession, nextPlayer] = await Promise.all([
-          fetchPublicSession(code.toUpperCase()),
-          fetchPlayer(playerId),
+          fetchPublicSession(currentCode),
+          fetchPlayer(currentPlayerId),
         ]);
         if (!active) return;
         setSession(nextSession);
@@ -51,9 +53,19 @@ export default function GamePlayer() {
   }, [code, playerId, nav]);
 
   const normalizedAnswers = useMemo(() => {
-    if (!session) return [];
-    return session.questions.map((_, index) => answers[index] || '');
-  }, [answers, session]);
+    if (!session || !player) return [];
+    const playerQuestions = Array.isArray(player.questions) && player.questions.length > 0
+      ? player.questions
+      : session.questions.map((question, index) => ({ id: `legacy-${index}`, IT: question, EN: question, SV: question }));
+    return playerQuestions.map((_, index) => answers[index] || '');
+  }, [answers, player, session]);
+
+  const playerQuestions = useMemo(() => {
+    if (!session || !player) return [];
+    return Array.isArray(player.questions) && player.questions.length > 0
+      ? player.questions
+      : session.questions.map((question, index) => ({ id: `legacy-${index}`, IT: question, EN: question, SV: question }));
+  }, [player, session]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -133,10 +145,10 @@ export default function GamePlayer() {
 
         <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex flex-col gap-3">
           <div className="bg-white rounded-3xl shadow-xl p-5 overflow-y-auto flex-1 flex flex-col gap-4">
-            {session.questions.map((question, index) => (
-              <label key={`${session.code}-${index}`} className="block">
+            {playerQuestions.map((question, index) => (
+              <label key={`${session.code}-${question.id}-${index}`} className="block">
                 <span className="block text-xs font-black tracking-widest text-purple-500 mb-2">DOMANDA {index + 1}</span>
-                <strong className="block text-gray-800 text-xl font-black mb-3">{question}</strong>
+                <strong className="block text-gray-800 text-xl font-black mb-3">{resolveQuestionText(question)}</strong>
                 <textarea
                   value={answers[index] || ''}
                   onChange={(event) => setAnswers((current) => ({ ...current, [index]: event.target.value }))}

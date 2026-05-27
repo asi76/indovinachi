@@ -25,6 +25,9 @@ const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'asi.vong@gmail.com').toLowerCas
 const SESSION_COLLECTION = 'icebreaker_sessions';
 const PLAYER_COLLECTION = 'icebreaker_players';
 const RESPONSE_COLLECTION = 'icebreaker_responses';
+const QUESTION_COLLECTION = 'icebreaker_questions';
+const DEFAULT_QUESTIONS_JSON = process.env.DEFAULT_QUESTIONS_JSON || '/home/asi/Hämtningar/domande.json';
+let defaultQuestionsSeeded = false;
 
 const app = express();
 app.use(express.json());
@@ -111,6 +114,39 @@ function normalizeQuestions(value) {
     : [];
 }
 
+function normalizeQuestionCount(value) {
+  const count = Number(value);
+  if (!Number.isFinite(count)) return 3;
+  return Math.max(1, Math.min(24, Math.trunc(count)));
+}
+
+function normalizeMultilingualQuestion(entry) {
+  const question = {
+    externalId: entry?.externalId ?? entry?.id ?? '',
+    IT: String(entry?.IT || entry?.it || '').trim(),
+    EN: String(entry?.EN || entry?.en || '').trim(),
+    SV: String(entry?.SV || entry?.sv || '').trim(),
+    active: entry?.active === undefined ? true : Boolean(entry.active),
+  };
+  if (!question.IT || !question.EN || !question.SV) return null;
+  return {
+    ...question,
+    externalId: String(question.externalId || '').slice(0, 64),
+    IT: question.IT.slice(0, 500),
+    EN: question.EN.slice(0, 500),
+    SV: question.SV.slice(0, 500),
+  };
+}
+
+function questionView(entry) {
+  return {
+    id: entry.id,
+    IT: entry.IT || '',
+    EN: entry.EN || '',
+    SV: entry.SV || '',
+  };
+}
+
 function isSessionActive(status) {
   return !['finished', 'terminated'].includes(String(status || ''));
 }
@@ -123,6 +159,81 @@ async function authenticatePocketBase() {
     await pb.collection('_superusers').authWithPassword(PB_ADMIN_EMAIL, PB_ADMIN_PASSWORD);
   }
   return pb;
+}
+
+async function getActiveQuestions(pocketBase) {
+  const questions = await pocketBase.collection(QUESTION_COLLECTION).getFullList({
+    filter: 'active=true',
+  });
+  return [...questions].sort((left, right) => {
+    const leftCreated = Date.parse(left.created || '') || 0;
+    const rightCreated = Date.parse(right.created || '') || 0;
+    return leftCreated - rightCreated;
+  });
+}
+
+async function upsertQuestion(pocketBase, question) {
+  const normalized = normalizeMultilingualQuestion(question);
+  if (!normalized) return null;
+
+  const existing = await pocketBase.collection(QUESTION_COLLECTION).getList(1, 1, {
+    filter: `IT="${escapeFilter(normalized.IT)}" && EN="${escapeFilter(normalized.EN)}" && SV="${escapeFilter(normalized.SV)}"`,
+  });
+  const found = existing.items[0];
+  if (found) {
+    return pocketBase.collection(QUESTION_COLLECTION).update(found.id, normalized);
+  }
+  return pocketBase.collection(QUESTION_COLLECTION).create(normalized);
+}
+
+async function ensureDefaultQuestions(pocketBase) {
+  if (defaultQuestionsSeeded) return;
+  defaultQuestionsSeeded = true;
+
+  const existing = await pocketBase.collection(QUESTION_COLLECTION).getList(1, 1, {
+    filter: 'active=true',
+  });
+  if (existing.totalItems > 0 || !fs.existsSync(DEFAULT_QUESTIONS_JSON)) return;
+
+  const parsed = JSON.parse(fs.readFileSync(DEFAULT_QUESTIONS_JSON, 'utf8'));
+  const questions = Array.isArray(parsed) ? parsed : parsed.questions;
+  if (!Array.isArray(questions)) return;
+  await Promise.all(questions.map((entry) => upsertQuestion(pocketBase, entry)));
+}
+
+async function pickQuestionsForPlayer(pocketBase, sessionRecord) {
+  await ensureDefaultQuestions(pocketBase);
+  const bank = await getActiveQuestions(pocketBase);
+  const fallback = normalizeQuestions(sessionRecord.questions).map((text, index) => ({
+    id: `legacy-${index}`,
+    IT: text,
+    EN: text,
+    SV: text,
+  }));
+  if (bank.length === 0) return fallback.slice(0, normalizeQuestionCount(sessionRecord.questionCount || fallback.length || 3));
+
+  const count = Math.min(normalizeQuestionCount(sessionRecord.questionCount), Math.max(bank.length, 1));
+  const selected = [];
+  let used = Array.isArray(sessionRecord.assignedQuestionIds) ? [...sessionRecord.assignedQuestionIds] : [];
+  let available = bank.filter((question) => !used.includes(question.id));
+
+  while (selected.length < count) {
+    if (available.length === 0) {
+      used = [];
+      available = bank.filter((question) => !selected.some((entry) => entry.id === question.id));
+      if (available.length === 0) available = [...bank];
+    }
+    const [next] = shuffle(available).slice(0, 1);
+    selected.push(next);
+    used.push(next.id);
+    available = available.filter((question) => question.id !== next.id);
+  }
+
+  await pocketBase.collection(SESSION_COLLECTION).update(sessionRecord.id, {
+    assignedQuestionIds: used,
+  });
+
+  return selected.map(questionView);
 }
 
 async function authenticateCentralAuthPocketBase() {
@@ -282,6 +393,8 @@ async function buildSessionView(pocketBase, record) {
     theme: record.theme || '',
     status: record.status || 'draft',
     questions: Array.isArray(record.questions) ? record.questions : [],
+    questionCount: normalizeQuestionCount(record.questionCount),
+    assignedQuestionIds: Array.isArray(record.assignedQuestionIds) ? record.assignedQuestionIds : [],
     presenterToken: record.presenterToken || '',
     remoteToken: record.remoteToken || '',
     revealQueue: Array.isArray(record.revealQueue) ? record.revealQueue : [],
@@ -301,6 +414,7 @@ async function buildSessionView(pocketBase, record) {
       sessionCode: entry.sessionCode,
       nickname: entry.nickname,
       avatar: entry.avatar,
+      questions: Array.isArray(entry.questions) ? entry.questions : [],
       submitted: Boolean(entry.submitted),
       joinedAt: entry.joinedAt,
       submittedAt: entry.submittedAt || null,
@@ -361,7 +475,7 @@ async function startRevealForSession(pocketBase, sessionRecord) {
   }
   const grouped = new Map();
   for (const response of responses) {
-    const key = Number.isFinite(response.questionIndex) ? response.questionIndex : 0;
+    const key = response.questionId || response.questionText || (Number.isFinite(response.questionIndex) ? response.questionIndex : 0);
     if (!grouped.has(key)) {
       grouped.set(key, {
         prompt: response.questionText,
@@ -416,6 +530,48 @@ app.post('/api/auth/session', requireAuthorizedHost, async (req, res) => {
   });
 });
 
+app.get('/api/questions', requireAuthorizedHost, async (req, res) => {
+  try {
+    const pocketBase = await authenticatePocketBase();
+    await ensureDefaultQuestions(pocketBase);
+    const questions = await getActiveQuestions(pocketBase);
+    res.json({ questions: questions.map(questionView) });
+  } catch (error) {
+    console.error('[questions]', error);
+    res.status(500).json({ error: 'Impossibile caricare il database domande' });
+  }
+});
+
+app.post('/api/questions', requireAuthorizedHost, async (req, res) => {
+  try {
+    const pocketBase = await authenticatePocketBase();
+    const created = await upsertQuestion(pocketBase, req.body);
+    if (!created) {
+      return res.status(400).json({ error: 'La domanda deve avere traduzione IT, EN e SV' });
+    }
+    res.status(201).json({ question: questionView(created) });
+  } catch (error) {
+    console.error('[createQuestion]', error);
+    res.status(500).json({ error: 'Impossibile salvare la domanda' });
+  }
+});
+
+app.post('/api/questions/import', requireAuthorizedHost, async (req, res) => {
+  try {
+    const list = Array.isArray(req.body?.questions) ? req.body.questions : [];
+    if (list.length === 0) {
+      return res.status(400).json({ error: 'JSON senza domande valide' });
+    }
+    const pocketBase = await authenticatePocketBase();
+    const results = await Promise.all(list.map((entry) => upsertQuestion(pocketBase, entry)));
+    const imported = results.filter(Boolean).length;
+    res.json({ imported, total: list.length });
+  } catch (error) {
+    console.error('[importQuestions]', error);
+    res.status(500).json({ error: 'Import domande fallito' });
+  }
+});
+
 app.get('/api/host/sessions', requireAuthorizedHost, async (req, res) => {
   try {
     const pocketBase = await authenticatePocketBase();
@@ -465,6 +621,8 @@ app.post('/api/sessions', requireAuthorizedHost, async (req, res) => {
       theme: 'Studio party 70s, dinamico, luminoso, pieno di ritmo',
       status: 'draft',
       questions: [],
+      questionCount: 3,
+      assignedQuestionIds: [],
       presenterToken: generateToken(),
       remoteToken: generateToken(),
       revealQueue: [],
@@ -486,12 +644,75 @@ app.post('/api/sessions', requireAuthorizedHost, async (req, res) => {
   }
 });
 
+app.post('/api/sessions/:code/join', async (req, res) => {
+  try {
+    const pocketBase = await authenticatePocketBase();
+    const session = await getSessionByCode(pocketBase, req.params.code?.toUpperCase());
+    if (!session) {
+      return res.status(404).json({ error: 'Sessione non trovata' });
+    }
+    if (['finished', 'terminated'].includes(session.status)) {
+      return res.status(400).json({ error: 'Sessione chiusa' });
+    }
+
+    const nickname = String(req.body?.nickname || '').trim().slice(0, 28);
+    const avatar = String(req.body?.avatar || '').trim().slice(0, 8);
+    if (!nickname || !avatar) {
+      return res.status(400).json({ error: 'Nickname e avatar sono obbligatori' });
+    }
+
+    const duplicates = await pocketBase.collection(PLAYER_COLLECTION).getList(1, 1, {
+      filter: `sessionCode="${escapeFilter(session.code)}" && nickname="${escapeFilter(nickname)}"`,
+    });
+    if (duplicates.totalItems > 0) {
+      return res.status(409).json({ error: 'Nickname gia usato' });
+    }
+
+    const questions = await pickQuestionsForPlayer(pocketBase, session);
+    if (questions.length === 0) {
+      return res.status(400).json({ error: 'Nessuna domanda disponibile' });
+    }
+
+    const player = await pocketBase.collection(PLAYER_COLLECTION).create({
+      sessionCode: session.code,
+      nickname,
+      avatar,
+      questions,
+      submitted: false,
+      joinedAt: new Date().toISOString(),
+    });
+
+    if (session.status === 'draft') {
+      await pocketBase.collection(SESSION_COLLECTION).update(session.id, { status: 'lobby' });
+    }
+
+    res.status(201).json({
+      player: {
+        id: player.id,
+        sessionCode: player.sessionCode,
+        nickname: player.nickname,
+        avatar: player.avatar,
+        questions: Array.isArray(player.questions) ? player.questions : [],
+        submitted: Boolean(player.submitted),
+        joinedAt: player.joinedAt,
+        submittedAt: player.submittedAt || null,
+        created: player.created,
+        updated: player.updated,
+      },
+    });
+  } catch (error) {
+    console.error('[joinSession]', error);
+    res.status(500).json({ error: 'Ingresso in sessione fallito' });
+  }
+});
+
 app.patch('/api/sessions/:code/config', requireAuthorizedHost, requireOwnedSession, async (req, res) => {
   try {
     const updated = await req.pocketBase.collection(SESSION_COLLECTION).update(req.sessionRecord.id, {
       title: String(req.body?.title || 'Indovina Chi').trim().slice(0, 120),
       theme: String(req.body?.theme || '').trim().slice(0, 280),
       questions: normalizeQuestions(req.body?.questions),
+      questionCount: normalizeQuestionCount(req.body?.questionCount),
       status: 'lobby',
     });
     const session = await buildSessionView(req.pocketBase, updated);
@@ -504,9 +725,11 @@ app.patch('/api/sessions/:code/config', requireAuthorizedHost, requireOwnedSessi
 
 app.post('/api/sessions/:code/start-collecting', requireAuthorizedHost, requireOwnedSession, async (req, res) => {
   try {
+    await ensureDefaultQuestions(req.pocketBase);
+    const bank = await getActiveQuestions(req.pocketBase);
     const questions = normalizeQuestions(req.sessionRecord.questions);
-    if (questions.length === 0) {
-      return res.status(400).json({ error: 'Inserisci almeno una domanda prima di aprire la raccolta' });
+    if (bank.length === 0 && questions.length === 0) {
+      return res.status(400).json({ error: 'Inserisci almeno una domanda nel database prima di aprire la raccolta' });
     }
     const updated = await resetSessionForCollecting(req.pocketBase, req.sessionRecord, questions);
     const session = await buildSessionView(req.pocketBase, updated);
@@ -519,9 +742,11 @@ app.post('/api/sessions/:code/start-collecting', requireAuthorizedHost, requireO
 
 app.post('/api/sessions/:code/collect/open', requireRemoteSession, async (req, res) => {
   try {
+    await ensureDefaultQuestions(req.pocketBase);
+    const bank = await getActiveQuestions(req.pocketBase);
     const questions = normalizeQuestions(req.sessionRecord.questions);
-    if (questions.length === 0) {
-      return res.status(400).json({ error: 'Inserisci almeno una domanda prima di aprire la raccolta' });
+    if (bank.length === 0 && questions.length === 0) {
+      return res.status(400).json({ error: 'Inserisci almeno una domanda nel database prima di aprire la raccolta' });
     }
     const updated = await resetSessionForCollecting(req.pocketBase, req.sessionRecord, questions);
     const session = await buildSessionView(req.pocketBase, updated);
