@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion } from 'framer-motion';
 import { signOutFromGoogle } from '../../lib/firebase';
-import { createHostSession, fetchHostSessions, fetchQuestionBank, openCollecting, saveHostSessionConfig, startSession } from '../../lib/sessionApi';
+import { closeHostSession, createHostSession, fetchHostSessions, fetchQuestionBank, openCollecting, saveHostSessionConfig, startSession } from '../../lib/sessionApi';
 import { joinUrl, presenterUrl, remoteUrl, sessionStatusLabel } from '../../lib/game';
 import type { MultilingualQuestion, PublicSessionView, QuestionMode } from '../../types';
 
@@ -157,11 +157,31 @@ export default function HostDashboard() {
     }
   }
 
+  async function handleCloseSession() {
+    if (!session) return;
+    setBusy('close');
+    setError('');
+    try {
+      const updated = await closeHostSession(session.code);
+      setSessions([updated]);
+      setQuestionDraft(updated.questions.join('\n'));
+      setQuestionCountDraft(updated.questionCount || 3);
+      setQuestionModeDraft(updated.questionMode || 'direct');
+    } catch (closeError) {
+      setError(closeError instanceof Error ? closeError.message : 'Chiusura sessione fallita');
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const directQuestionCount = parseLines(questionDraft).length;
-  const canCollect = Boolean(session && (
+  const isCollecting = session?.status === 'collecting' || session?.status === 'ready';
+  const isLive = session?.status === 'revealing';
+  const canCollect = Boolean(session && !isCollecting && !isLive && (
     questionModeDraft === 'direct' ? directQuestionCount > 0 : questionBank.length > 0
   ));
-  const canStart = Boolean(session && session.answeredCount > 0);
+  const canStart = Boolean(session && isCollecting);
+  const canClose = Boolean(session && isLive);
   const questionsPerPlayerPreview = questionModeDraft === 'direct' ? directQuestionCount : questionCountDraft;
 
   return (
@@ -184,9 +204,6 @@ export default function HostDashboard() {
             <p className="text-gray-500 font-semibold mt-1">Stessa impostazione grafica di Quizzone, ma dedicata al reveal di Indovina Chi.</p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3">
-            <button onClick={() => nav('/host/admin/questions')} className="btn-white">
-              Admin domande
-            </button>
             {!session ? (
               <button onClick={() => void handleCreate()} className="btn-purple" disabled={busy === 'create'}>
                 {busy === 'create' ? 'Creo...' : 'Crea sessione'}
@@ -220,6 +237,24 @@ export default function HostDashboard() {
                 </div>
                 <span className="bg-purple-100 text-purple-700 text-sm font-black px-4 py-2 rounded-full">{sessionStatusLabel(session.status)}</span>
               </div>
+
+              {isCollecting ? (
+                <div className="mb-5 rounded-2xl border-2 border-emerald-200 bg-emerald-50 px-5 py-4">
+                  <div className="text-emerald-800 font-black text-lg">Raccolta domande attiva</div>
+                  <p className="text-emerald-700 font-semibold text-sm mt-1">
+                    I giocatori possono rispondere. Quando sei pronto, premi Inizia sessione.
+                  </p>
+                </div>
+              ) : null}
+
+              {isLive ? (
+                <div className="mb-5 rounded-2xl border-2 border-yellow-200 bg-yellow-50 px-5 py-4">
+                  <div className="text-yellow-900 font-black text-lg">Sessione in corso</div>
+                  <p className="text-yellow-800 font-semibold text-sm mt-1">
+                    Il reveal e attivo. Chiudi la sessione per scollegare i giocatori e preparare una nuova raccolta.
+                  </p>
+                </div>
+              ) : null}
 
               <div className="grid md:grid-cols-2 gap-4 mb-4">
                 <div>
@@ -278,18 +313,6 @@ export default function HostDashboard() {
                 />
               </div>
 
-              <div className="border-t border-gray-100 pt-5 mt-5">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div>
-                    <h4 className="text-xl font-black text-gray-800">Database domande</h4>
-                    <p className="text-sm font-bold text-gray-500">{questionBank.length} domande attive disponibili per la modalita casuale</p>
-                  </div>
-                  <button onClick={() => nav('/host/admin/questions')} className="btn-white">
-                    Gestisci database
-                  </button>
-                </div>
-              </div>
-
               <div className="flex flex-wrap gap-3">
                 <button onClick={() => void handleSave()} className="btn-purple" disabled={busy === 'save'}>
                   {busy === 'save' ? 'Salvo...' : 'Salva setup'}
@@ -297,9 +320,15 @@ export default function HostDashboard() {
                 <button onClick={() => void handleOpenCollecting()} className="btn-white" disabled={busy === 'collect' || !canCollect}>
                   {busy === 'collect' ? 'Apro...' : 'Apri raccolta'}
                 </button>
-                <button onClick={() => void handleStartSession()} className="btn-white" disabled={busy === 'start' || !canStart}>
-                  {busy === 'start' ? 'Avvio...' : 'Inizia sessione'}
-                </button>
+                {canClose ? (
+                  <button onClick={() => void handleCloseSession()} className="btn-white text-red-700" disabled={busy === 'close'}>
+                    {busy === 'close' ? 'Chiudo...' : 'Chiudi sessione'}
+                  </button>
+                ) : (
+                  <button onClick={() => void handleStartSession()} className="btn-white" disabled={busy === 'start' || !canStart}>
+                    {busy === 'start' ? 'Avvio...' : 'Inizia sessione'}
+                  </button>
+                )}
               </div>
             </div>
 

@@ -59,6 +59,12 @@ export default function GamePlayer() {
         setPlayer(nextPlayer);
       } catch (loadError) {
         if (active) {
+          const latestSession = await fetchPublicSession(currentCode).catch(() => null);
+          if (latestSession && ['finished', 'terminated'].includes(latestSession.status)) {
+            clearPlayerToken();
+            nav(`/play/${currentCode}`, { replace: true });
+            return;
+          }
           setError(loadError instanceof Error ? loadError.message : 'Giocatore non disponibile');
         }
       } finally {

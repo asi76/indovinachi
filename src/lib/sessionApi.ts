@@ -49,6 +49,11 @@ export async function startSession(code: string): Promise<PublicSessionView> {
   return payload.session as PublicSessionView;
 }
 
+export async function closeHostSession(code: string): Promise<PublicSessionView> {
+  const payload = await authorizedFetch(`/api/sessions/${code}/close`, { method: 'POST' });
+  return payload.session as PublicSessionView;
+}
+
 export async function fetchPublicSession(code: string): Promise<PublicSessionView> {
   const response = await fetch(`/api/sessions/${code}/public`);
   const payload = await response.json().catch(() => ({}));
