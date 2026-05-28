@@ -104,7 +104,7 @@ export default function RemoteController({ sessionCode, token }: { sessionCode: 
             {busy === 'player' ? 'Rivelo...' : 'Mostra giocatore'}
           </button>
           <button onClick={() => void handleAction('finish')} disabled={!canFinish || busy !== null} className="py-4 border-2 border-gray-200 text-gray-600 font-black rounded-2xl hover:bg-gray-50 active:scale-95 transition-all disabled:opacity-40">
-            {busy === 'finish' ? 'Chiudo...' : 'Chiudi reveal'}
+            {busy === 'finish' ? 'Chiudo...' : 'Chiudi gioco'}
           </button>
         </div>
 

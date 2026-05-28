@@ -79,7 +79,7 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
           className="card text-center max-w-5xl w-full"
           style={{ transformStyle: 'preserve-3d' }}
         >
-          <h2 className="text-5xl font-black text-gray-800 leading-tight">{session.currentQuestionText || 'Pronta per il reveal'}</h2>
+          <h2 className="text-5xl font-black text-gray-800 leading-tight">{session.currentQuestionText || 'Pronti?'}</h2>
         </motion.div>
 
         {session.currentAnswerText ? (

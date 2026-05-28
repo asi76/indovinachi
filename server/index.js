@@ -390,6 +390,23 @@ async function getResponsesByCode(pocketBase, code) {
   });
 }
 
+async function deleteRecordsBySessionCode(pocketBase, collectionName, code) {
+  while (true) {
+    const records = await pocketBase.collection(collectionName).getFullList({
+      filter: `sessionCode="${escapeFilter(code)}"`,
+    });
+    if (records.length === 0) return;
+    for (const record of records) {
+      await pocketBase.collection(collectionName).delete(record.id);
+    }
+  }
+}
+
+async function clearSessionParticipants(pocketBase, code) {
+  await deleteRecordsBySessionCode(pocketBase, RESPONSE_COLLECTION, code);
+  await deleteRecordsBySessionCode(pocketBase, PLAYER_COLLECTION, code);
+}
+
 async function questionAssignmentsForPlayers(pocketBase, sessionRecord, players) {
   const state = assignmentState(sessionRecord);
   const fallback = directQuestionsForSession(sessionRecord);
@@ -942,11 +959,7 @@ app.get('/api/sessions/:code/remote', requireRemoteSession, async (req, res) => 
 
 app.post('/api/sessions/:code/close', requireAuthorizedHost, requireOwnedSession, async (req, res) => {
   try {
-    const players = await getPlayersByCode(req.pocketBase, req.sessionRecord.code);
-    const responses = await getResponsesByCode(req.pocketBase, req.sessionRecord.code);
-
-    await Promise.all(responses.map((entry) => req.pocketBase.collection(RESPONSE_COLLECTION).delete(entry.id)));
-    await Promise.all(players.map((player) => req.pocketBase.collection(PLAYER_COLLECTION).delete(player.id)));
+    await clearSessionParticipants(req.pocketBase, req.sessionRecord.code);
 
     const updated = await req.pocketBase.collection(SESSION_COLLECTION).update(req.sessionRecord.id, {
       status: 'finished',
@@ -1045,11 +1058,7 @@ app.post('/api/sessions/:code/reveal/player', requireRemoteSession, async (req, 
 
 app.post('/api/sessions/:code/reveal/finish', requireRemoteSession, async (req, res) => {
   try {
-    const players = await getPlayersByCode(req.pocketBase, req.sessionRecord.code);
-    const responses = await getResponsesByCode(req.pocketBase, req.sessionRecord.code);
-
-    await Promise.all(responses.map((entry) => req.pocketBase.collection(RESPONSE_COLLECTION).delete(entry.id)));
-    await Promise.all(players.map((player) => req.pocketBase.collection(PLAYER_COLLECTION).delete(player.id)));
+    await clearSessionParticipants(req.pocketBase, req.sessionRecord.code);
 
     const updated = await req.pocketBase.collection(SESSION_COLLECTION).update(req.sessionRecord.id, {
       status: 'finished',
