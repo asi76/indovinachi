@@ -36,8 +36,11 @@ export async function saveHostSessionConfig(code: string, config: { title: strin
   return payload.session as PublicSessionView;
 }
 
-export async function openCollecting(code: string): Promise<PublicSessionView> {
-  const payload = await authorizedFetch(`/api/sessions/${code}/start-collecting`, { method: 'POST' });
+export async function openCollecting(code: string, config?: { title: string; theme: string; questions: string[]; questionCount: number; questionMode: QuestionMode }): Promise<PublicSessionView> {
+  const payload = await authorizedFetch(`/api/sessions/${code}/start-collecting`, {
+    method: 'POST',
+    body: JSON.stringify(config || {}),
+  });
   return payload.session as PublicSessionView;
 }
 

@@ -102,19 +102,39 @@ export default function HostDashboard() {
     }
   }
 
+  async function handleQuestionModeToggle() {
+    const nextMode: QuestionMode = questionModeDraft === 'direct' ? 'random' : 'direct';
+    setQuestionModeDraft(nextMode);
+    if (!session) return;
+
+    setError('');
+    try {
+      const updated = await saveHostSessionConfig(session.code, {
+        title: titleDraft.trim() || 'Indovina Chi',
+        theme: themeDraft.trim(),
+        questions: parseLines(questionDraft),
+        questionCount: questionCountDraft,
+        questionMode: nextMode,
+      });
+      setSessions([updated]);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Modalita domande non salvata');
+    }
+  }
+
   async function handleOpenCollecting() {
     if (!session) return;
     setBusy('collect');
     setError('');
     try {
-      await saveHostSessionConfig(session.code, {
+      const config = {
         title: titleDraft.trim() || 'Indovina Chi',
         theme: themeDraft.trim(),
         questions: parseLines(questionDraft),
         questionCount: questionCountDraft,
         questionMode: questionModeDraft,
-      });
-      const updated = await openCollecting(session.code);
+      };
+      const updated = await openCollecting(session.code, config);
       setSessions([updated]);
     } catch (collectError) {
       setError(collectError instanceof Error ? collectError.message : 'Apertura raccolta fallita');
@@ -218,7 +238,7 @@ export default function HostDashboard() {
                     <label className="block text-xs font-black tracking-widest text-gray-500 mb-2">Assegnazione al check-in</label>
                     <button
                       type="button"
-                      onClick={() => setQuestionModeDraft((current) => (current === 'direct' ? 'random' : 'direct'))}
+                      onClick={() => void handleQuestionModeToggle()}
                       className="inline-flex items-center gap-3 rounded-full bg-white px-4 py-2 font-black text-gray-800 shadow-sm"
                     >
                       <span className={`h-7 w-12 rounded-full p-1 transition-colors ${questionModeDraft === 'random' ? 'bg-purple-700' : 'bg-gray-300'}`}>
