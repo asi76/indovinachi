@@ -461,6 +461,7 @@ async function buildSessionView(pocketBase, record) {
   const answeredCount = players.filter((entry) => Boolean(entry.submitted)).length;
   const allAnswered = players.length > 0 && answeredCount === players.length;
   const nextStatus = record.status === 'collecting' && allAnswered ? 'ready' : record.status;
+  const currentAnswerPlayer = currentAnswerEntry(record);
 
   if (nextStatus !== record.status) {
     const updated = await pocketBase.collection(SESSION_COLLECTION).update(record.id, { status: nextStatus });
@@ -493,6 +494,8 @@ async function buildSessionView(pocketBase, record) {
     playerCount: players.length,
     answeredCount,
     allAnswered,
+    currentAnswerPlayer,
+    currentAnswerPlayerVisible: record.status === 'revealing' && record.revealPhase === 'complete' && Boolean(currentAnswerPlayer),
     players: players.map((entry) => ({
       id: entry.id,
       sessionCode: entry.sessionCode,
@@ -585,18 +588,14 @@ async function startRevealForSession(pocketBase, sessionRecord) {
     throw new Error('Nessuna risposta disponibile per il reveal');
   }
 
-  const firstQuestion = randomItem(queue) || queue[0];
-  const firstQuestionIndex = queue.indexOf(firstQuestion);
-  const firstAnswer = randomItem(firstQuestion.answers);
-
   return pocketBase.collection(SESSION_COLLECTION).update(sessionRecord.id, {
     status: 'revealing',
     revealQueue: queue,
-    currentQuestionIndex: firstQuestionIndex,
-    currentAnswerIndex: firstAnswer ? firstQuestion.answers.indexOf(firstAnswer) : -1,
-    currentQuestionText: firstQuestion.prompt,
-    currentAnswerText: firstAnswer?.text || '',
-    revealPhase: 'answer',
+    currentQuestionIndex: -1,
+    currentAnswerIndex: -1,
+    currentQuestionText: '',
+    currentAnswerText: '',
+    revealPhase: 'idle',
     discoSpin: nextDiscoSpin(sessionRecord.discoSpin),
   });
 }
@@ -605,6 +604,12 @@ function currentRevealItem(sessionRecord) {
   const queue = Array.isArray(sessionRecord.revealQueue) ? sessionRecord.revealQueue : [];
   const questionIndex = typeof sessionRecord.currentQuestionIndex === 'number' ? sessionRecord.currentQuestionIndex : -1;
   return queue[questionIndex] || null;
+}
+
+function currentAnswerEntry(sessionRecord) {
+  const revealItem = currentRevealItem(sessionRecord);
+  const answerIndex = typeof sessionRecord.currentAnswerIndex === 'number' ? sessionRecord.currentAnswerIndex : -1;
+  return revealItem?.answers?.[answerIndex] || null;
 }
 
 app.post('/api/auth/session', requireAuthorizedHost, async (req, res) => {
@@ -966,27 +971,27 @@ app.post('/api/sessions/:code/reveal/question', requireRemoteSession, async (req
     let record = req.sessionRecord;
     if (record.status !== 'revealing') {
       record = await startRevealForSession(req.pocketBase, record);
-    } else {
-      const queue = Array.isArray(record.revealQueue) ? record.revealQueue : [];
-      const nextIndex = (typeof record.currentQuestionIndex === 'number' ? record.currentQuestionIndex : -1) + 1;
-      if (nextIndex >= queue.length) {
-        const finished = await req.pocketBase.collection(SESSION_COLLECTION).update(record.id, {
-          status: 'finished',
-          revealPhase: 'complete',
-          currentAnswerText: '',
-        });
-        const session = await buildSessionView(req.pocketBase, finished);
-        return res.json({ session });
-      }
-      record = await req.pocketBase.collection(SESSION_COLLECTION).update(record.id, {
-        currentQuestionIndex: nextIndex,
-        currentAnswerIndex: -1,
-        currentQuestionText: queue[nextIndex].prompt,
-        currentAnswerText: '',
-        revealPhase: 'question',
-        discoSpin: nextDiscoSpin(record.discoSpin),
-      });
     }
+
+    const queue = Array.isArray(record.revealQueue) ? record.revealQueue : [];
+    const nextIndex = (typeof record.currentQuestionIndex === 'number' ? record.currentQuestionIndex : -1) + 1;
+    if (nextIndex >= queue.length) {
+      const finished = await req.pocketBase.collection(SESSION_COLLECTION).update(record.id, {
+        status: 'finished',
+        revealPhase: 'complete',
+        currentAnswerText: '',
+      });
+      const session = await buildSessionView(req.pocketBase, finished);
+      return res.json({ session });
+    }
+    record = await req.pocketBase.collection(SESSION_COLLECTION).update(record.id, {
+      currentQuestionIndex: nextIndex,
+      currentAnswerIndex: -1,
+      currentQuestionText: queue[nextIndex].prompt,
+      currentAnswerText: '',
+      revealPhase: 'question',
+      discoSpin: nextDiscoSpin(record.discoSpin),
+    });
     const session = await buildSessionView(req.pocketBase, record);
     res.json({ session });
   } catch (error) {
@@ -1016,6 +1021,24 @@ app.post('/api/sessions/:code/reveal/answer', requireRemoteSession, async (req, 
   } catch (error) {
     console.error('[revealAnswer]', error);
     res.status(400).json({ error: error instanceof Error ? error.message : 'Impossibile mostrare la risposta' });
+  }
+});
+
+app.post('/api/sessions/:code/reveal/player', requireRemoteSession, async (req, res) => {
+  try {
+    const answer = currentAnswerEntry(req.sessionRecord);
+    if (!answer) {
+      return res.status(400).json({ error: 'Nessuna risposta attiva' });
+    }
+    const updated = await req.pocketBase.collection(SESSION_COLLECTION).update(req.sessionRecord.id, {
+      revealPhase: 'complete',
+      discoSpin: nextDiscoSpin(req.sessionRecord.discoSpin),
+    });
+    const session = await buildSessionView(req.pocketBase, updated);
+    res.json({ session });
+  } catch (error) {
+    console.error('[revealPlayer]', error);
+    res.status(400).json({ error: error instanceof Error ? error.message : 'Impossibile mostrare il giocatore' });
   }
 });
 

@@ -68,7 +68,7 @@ export async function fetchRemoteSession(code: string, token: string): Promise<P
   return payload.session as PublicSessionView;
 }
 
-export async function remoteAction(code: string, token: string, action: 'open-collect' | 'start-session' | 'question' | 'answer' | 'finish') {
+export async function remoteAction(code: string, token: string, action: 'open-collect' | 'start-session' | 'question' | 'answer' | 'player' | 'finish') {
   const path = action === 'open-collect'
     ? `/api/sessions/${code}/collect/open`
     : action === 'start-session'

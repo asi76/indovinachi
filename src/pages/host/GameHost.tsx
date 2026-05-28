@@ -61,6 +61,9 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
   }
 
   if (session.status === 'revealing') {
+    const answerPlayer = session.currentAnswerPlayer;
+    const showAnswerPlayer = session.currentAnswerPlayerVisible && Boolean(answerPlayer);
+
     return (
       <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-8 p-8 relative pt-16">
         <h1 className="text-[3.53rem] font-black text-white leading-none flex items-center gap-0.5">
@@ -81,10 +84,31 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
           initial={{ scale: 0.92, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="bg-yellow-400 text-gray-900 rounded-3xl px-10 py-6 text-center max-w-4xl w-full shadow-2xl"
+          className="max-w-4xl w-full"
+          style={{ perspective: 1400 }}
         >
-          <p className="text-[1.2rem] font-black tracking-widest mb-2">RISPOSTA ESTRATTA</p>
-          <p className="font-black text-[2.5rem] leading-tight">{session.currentAnswerText || 'Il telecomando puo mostrare la prima risposta casuale'}</p>
+          <motion.div
+            animate={{ rotateY: showAnswerPlayer ? 180 : 0 }}
+            transition={{ duration: 0.65, ease: 'easeInOut' }}
+            className="relative min-h-[14rem]"
+            style={{ transformStyle: 'preserve-3d' }}
+          >
+            <div
+              className="absolute inset-0 bg-yellow-400 text-gray-900 rounded-3xl px-10 py-6 text-center shadow-2xl flex flex-col items-center justify-center"
+              style={{ backfaceVisibility: 'hidden' }}
+            >
+              <p className="text-[1.2rem] font-black tracking-widest mb-2">RISPOSTA ESTRATTA</p>
+              <p className="font-black text-[2.5rem] leading-tight">{session.currentAnswerText || 'Premi Mostra risposta dal telecomando'}</p>
+            </div>
+            <div
+              className="absolute inset-0 bg-white text-gray-900 rounded-3xl px-10 py-6 text-center shadow-2xl flex flex-col items-center justify-center"
+              style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+            >
+              <p className="text-purple-500 text-[1.2rem] font-black tracking-widest mb-3">GIOCATORE</p>
+              <p className="text-6xl mb-3">{answerPlayer?.avatar}</p>
+              <p className="font-black text-[3rem] leading-tight">{answerPlayer?.nickname || ''}</p>
+            </div>
+          </motion.div>
         </motion.div>
 
         <div className="fixed bottom-4 right-4 bg-purple-800 text-white text-sm font-bold px-4 py-2 rounded-xl shadow-lg z-50">

@@ -53,6 +53,8 @@ export interface PublicSessionView extends IcebreakerSessionRecord {
   answeredCount: number;
   allAnswered: boolean;
   players: IcebreakerPlayerRecord[];
+  currentAnswerPlayer: RevealAnswerEntry | null;
+  currentAnswerPlayerVisible: boolean;
 }
 
 export interface IcebreakerPlayerRecord {

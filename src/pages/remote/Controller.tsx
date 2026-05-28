@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { fetchRemoteSession, remoteAction } from '../../lib/sessionApi';
 import type { PublicSessionView } from '../../types';
 
+type RemoteAction = 'open-collect' | 'start-session' | 'question' | 'answer' | 'player' | 'finish';
+
 export default function RemoteController({ sessionCode, token }: { sessionCode: string; token: string }) {
   const [session, setSession] = useState<PublicSessionView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export default function RemoteController({ sessionCode, token }: { sessionCode: 
     };
   }, [sessionCode, token]);
 
-  async function handleAction(action: 'open-collect' | 'start-session' | 'question' | 'answer' | 'finish') {
+  async function handleAction(action: RemoteAction) {
     setBusy(action);
     setError('');
     try {
@@ -62,6 +64,7 @@ export default function RemoteController({ sessionCode, token }: { sessionCode: 
   const canStartSession = ['collecting', 'ready'].includes(session.status) && session.answeredCount > 0;
   const canQuestion = session.status === 'revealing' || session.answeredCount > 0;
   const canAnswer = session.status === 'revealing' && Boolean(session.currentQuestionText);
+  const canPlayer = session.status === 'revealing' && session.revealPhase === 'answer' && Boolean(session.currentAnswerText);
   const canFinish = session.status === 'revealing' || session.status === 'finished';
 
   return (
@@ -70,7 +73,7 @@ export default function RemoteController({ sessionCode, token }: { sessionCode: 
         <div className="text-center mb-6">
           <h1 className="text-4xl font-black text-gray-800">Indovina Chi</h1>
           <p className="text-purple-500 font-black tracking-[0.3em] mt-2">{session.code}</p>
-          <p className="text-gray-500 font-semibold mt-3">Il bottone principale e Inizia sessione: appena lo premi parte il reveal con prima domanda e una risposta casuale.</p>
+          <p className="text-gray-500 font-semibold mt-3">Inizia sessione prepara il reveal. Poi usa Prossima domanda, Mostra risposta e Mostra giocatore.</p>
         </div>
 
         <div className="grid grid-cols-2 gap-3 mb-5">
@@ -91,11 +94,14 @@ export default function RemoteController({ sessionCode, token }: { sessionCode: 
           <button onClick={() => void handleAction('start-session')} disabled={!canStartSession || busy !== null} className="btn-purple text-lg disabled:opacity-40">
             {busy === 'start-session' ? 'Parto...' : 'Inizia sessione'}
           </button>
+          <button onClick={() => void handleAction('question')} disabled={!canQuestion || busy !== null} className="btn-white text-lg disabled:opacity-40">
+            {busy === 'question' ? 'Estraggo...' : 'Prossima domanda'}
+          </button>
           <button onClick={() => void handleAction('answer')} disabled={!canAnswer || busy !== null} className="btn-white text-lg disabled:opacity-40">
             {busy === 'answer' ? 'Mostro...' : 'Mostra risposta'}
           </button>
-          <button onClick={() => void handleAction('question')} disabled={!canQuestion || busy !== null} className="btn-white text-lg disabled:opacity-40">
-            {busy === 'question' ? 'Estraggo...' : 'Prossima domanda'}
+          <button onClick={() => void handleAction('player')} disabled={!canPlayer || busy !== null} className="btn-white text-lg disabled:opacity-40">
+            {busy === 'player' ? 'Rivelo...' : 'Mostra giocatore'}
           </button>
           <button onClick={() => void handleAction('finish')} disabled={!canFinish || busy !== null} className="py-4 border-2 border-gray-200 text-gray-600 font-black rounded-2xl hover:bg-gray-50 active:scale-95 transition-all disabled:opacity-40">
             {busy === 'finish' ? 'Chiudo...' : 'Chiudi reveal'}
@@ -106,6 +112,9 @@ export default function RemoteController({ sessionCode, token }: { sessionCode: 
           <p className="text-xs font-black tracking-widest text-gray-500 mb-2">ANTEPRIMA LIVE</p>
           <strong className="block text-gray-900 text-lg">{session.currentQuestionText || 'Nessuna domanda attiva'}</strong>
           <p className="text-gray-500 font-semibold mt-2">{session.currentAnswerText || 'Nessuna risposta ancora mostrata'}</p>
+          {session.currentAnswerPlayerVisible && session.currentAnswerPlayer ? (
+            <p className="text-purple-700 font-black mt-2">{session.currentAnswerPlayer.avatar} {session.currentAnswerPlayer.nickname}</p>
+          ) : null}
         </div>
 
         {error ? <div className="mt-4 bg-red-50 border border-red-200 text-red-600 rounded-xl p-3 text-sm font-semibold">{error}</div> : null}
