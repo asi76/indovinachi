@@ -932,6 +932,40 @@ app.post('/api/sessions/:code/start-reveal', requireAuthorizedHost, requireOwned
   }
 });
 
+app.post('/api/sessions/:code/terminate', requireAuthorizedHost, requireOwnedSession, async (req, res) => {
+  try {
+    const players = await getPlayersByCode(req.pocketBase, req.sessionRecord.code);
+    const responses = await getResponsesByCode(req.pocketBase, req.sessionRecord.code);
+
+    for (const player of players) {
+      await req.pocketBase.collection(PLAYER_COLLECTION).delete(player.id).catch(() => {});
+    }
+    for (const response of responses) {
+      await req.pocketBase.collection(RESPONSE_COLLECTION).delete(response.id).catch(() => {});
+    }
+
+    const updated = await req.pocketBase.collection(SESSION_COLLECTION).update(req.sessionRecord.id, {
+      title: 'Indovina Chi',
+      theme: 'Studio party 70s, dinamico, luminoso, pieno di ritmo',
+      status: 'draft',
+      questions: [],
+      revealQueue: [],
+      currentQuestionIndex: -1,
+      currentAnswerIndex: -1,
+      currentQuestionText: '',
+      currentAnswerText: '',
+      revealPhase: 'idle',
+      discoSpin: 0,
+    });
+    const session = await buildSessionView(req.pocketBase, updated);
+    res.json({ session });
+  } catch (error) {
+    console.error('[terminateSession]', error);
+    res.status(500).json({ error: 'Impossibile terminare la sessione' });
+  }
+});
+
+
 app.get('/api/sessions/:code/public', async (req, res) => {
   try {
     const pocketBase = await authenticatePocketBase();

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion } from 'framer-motion';
 import { signOutFromGoogle } from '../../lib/firebase';
-import { closeHostSession, createHostSession, fetchHostSessions, fetchQuestionBank, openCollecting, saveHostSessionConfig, startSession } from '../../lib/sessionApi';
+import { closeHostSession, createHostSession, fetchHostSessions, fetchQuestionBank, openCollecting, saveHostSessionConfig, startSession, terminateHostSession } from '../../lib/sessionApi';
 import { joinUrl, presenterUrl, remoteUrl, sessionStatusLabel } from '../../lib/game';
 import type { MultilingualQuestion, PublicSessionView, QuestionMode } from '../../types';
 
@@ -169,6 +169,24 @@ export default function HostDashboard() {
       setQuestionModeDraft(updated.questionMode || 'direct');
     } catch (closeError) {
       setError(closeError instanceof Error ? closeError.message : 'Chiusura sessione fallita');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleTerminateSession() {
+    if (!session) return;
+    if (!window.confirm('Vuoi davvero terminare la sessione? Questo resetterà le impostazioni e scollegherà tutti i giocatori.')) return;
+    setBusy('terminate');
+    setError('');
+    try {
+      const updated = await terminateHostSession(session.code);
+      setSessions([updated]);
+      setQuestionDraft('');
+      setTitleDraft('Indovina Chi');
+      setThemeDraft('Studio party 70s, dinamico, luminoso, pieno di ritmo');
+    } catch (terminateError) {
+      setError(terminateError instanceof Error ? terminateError.message : 'Terminazione fallita');
     } finally {
       setBusy(null);
     }
@@ -376,6 +394,13 @@ export default function HostDashboard() {
                   ))}
                 </div>
               </div>
+
+              <div className="flex justify-end">
+                <button onClick={() => void handleTerminateSession()} className="btn-white text-red-700" disabled={busy === 'terminate'}>
+                  {busy === 'terminate' ? 'Termino...' : 'Termina Sessione e Resetta'}
+                </button>
+              </div>
+
             </div>
           </div>
         )}
