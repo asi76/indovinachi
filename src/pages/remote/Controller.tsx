@@ -60,7 +60,7 @@ export default function RemoteController({ sessionCode, token }: { sessionCode: 
     );
   }
 
-  const canOpenCollect = ['draft', 'lobby', 'ready', 'finished'].includes(session.status);
+  const canOpenCollect = ['draft', 'lobby', 'finished'].includes(session.status);
   const canStartSession = ['collecting', 'ready'].includes(session.status) && session.answeredCount > 0;
   const canQuestion = session.status === 'revealing' || session.answeredCount > 0;
   const canAnswer = session.status === 'revealing' && Boolean(session.currentQuestionText);

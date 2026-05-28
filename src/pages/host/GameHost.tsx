@@ -72,44 +72,46 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
         <p className="text-purple-300 font-bold text-2xl">{session.title}</p>
 
         <motion.div
+          key={`question-${session.currentQuestionIndex}-${session.currentQuestionText}`}
           initial={{ scale: 0.92, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
+          animate={{ scale: 1, opacity: 1, rotateY: [90, 0] }}
+          transition={{ duration: 0.55, ease: 'easeOut' }}
           className="card text-center max-w-5xl w-full"
+          style={{ transformStyle: 'preserve-3d' }}
         >
-          <p className="text-purple-500 font-black tracking-widest mb-3">DOMANDA</p>
           <h2 className="text-5xl font-black text-gray-800 leading-tight">{session.currentQuestionText || 'Pronta per il reveal'}</h2>
         </motion.div>
 
-        <motion.div
-          initial={{ scale: 0.92, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.1 }}
-          className="max-w-4xl w-full"
-          style={{ perspective: 1400 }}
-        >
+        {session.currentAnswerText ? (
           <motion.div
-            animate={{ rotateY: showAnswerPlayer ? 180 : 0 }}
-            transition={{ duration: 0.65, ease: 'easeInOut' }}
-            className="relative min-h-[14rem]"
-            style={{ transformStyle: 'preserve-3d' }}
+            initial={{ scale: 0.92, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="max-w-4xl w-full"
+            style={{ perspective: 1400 }}
           >
-            <div
-              className="absolute inset-0 bg-yellow-400 text-gray-900 rounded-3xl px-10 py-6 text-center shadow-2xl flex flex-col items-center justify-center"
-              style={{ backfaceVisibility: 'hidden' }}
+            <motion.div
+              animate={{ rotateX: showAnswerPlayer ? -180 : 0 }}
+              transition={{ duration: 0.7, ease: 'easeInOut' }}
+              className="relative min-h-[14rem]"
+              style={{ transformStyle: 'preserve-3d', transformOrigin: 'bottom center' }}
             >
-              <p className="text-[1.2rem] font-black tracking-widest mb-2">RISPOSTA ESTRATTA</p>
-              <p className="font-black text-[2.5rem] leading-tight">{session.currentAnswerText || 'Premi Mostra risposta dal telecomando'}</p>
-            </div>
-            <div
-              className="absolute inset-0 bg-white text-gray-900 rounded-3xl px-10 py-6 text-center shadow-2xl flex flex-col items-center justify-center"
-              style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
-            >
-              <p className="text-purple-500 text-[1.2rem] font-black tracking-widest mb-3">GIOCATORE</p>
-              <p className="text-6xl mb-3">{answerPlayer?.avatar}</p>
-              <p className="font-black text-[3rem] leading-tight">{answerPlayer?.nickname || ''}</p>
-            </div>
+              <div
+                className="absolute inset-0 bg-yellow-400 text-gray-900 rounded-3xl px-10 py-6 text-center shadow-2xl flex flex-col items-center justify-center"
+                style={{ backfaceVisibility: 'hidden' }}
+              >
+                <p className="font-black text-[2.5rem] leading-tight">{session.currentAnswerText}</p>
+              </div>
+              <div
+                className="absolute inset-0 bg-white text-gray-900 rounded-3xl px-10 py-6 text-center shadow-2xl flex flex-col items-center justify-center"
+                style={{ backfaceVisibility: 'hidden', transform: 'rotateX(180deg)' }}
+              >
+                <p className="text-6xl mb-3">{answerPlayer?.avatar}</p>
+                <p className="font-black text-[3rem] leading-tight">{answerPlayer?.nickname || ''}</p>
+              </div>
+            </motion.div>
           </motion.div>
-        </motion.div>
+        ) : null}
 
         <div className="fixed bottom-4 right-4 bg-purple-800 text-white text-sm font-bold px-4 py-2 rounded-xl shadow-lg z-50">
           {session.title} — CODICE: {session.code}
