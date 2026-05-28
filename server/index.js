@@ -457,7 +457,8 @@ async function resetSessionForCollecting(pocketBase, sessionRecord, questions) {
 
 async function buildSessionView(pocketBase, record) {
   const state = assignmentState(record);
-  const players = await getPlayersByCode(pocketBase, record.code);
+  const sessionClosed = ['finished', 'terminated'].includes(record.status);
+  const players = sessionClosed ? [] : await getPlayersByCode(pocketBase, record.code);
   const answeredCount = players.filter((entry) => Boolean(entry.submitted)).length;
   const allAnswered = players.length > 0 && answeredCount === players.length;
   const nextStatus = record.status === 'collecting' && allAnswered ? 'ready' : record.status;

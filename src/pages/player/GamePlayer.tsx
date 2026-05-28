@@ -127,7 +127,7 @@ export default function GamePlayer() {
     );
   }
 
-  if (session.status === 'terminated') {
+  if (session.status === 'finished' || session.status === 'terminated') {
     clearPlayerToken();
     return (
       <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-6 p-6">
@@ -263,18 +263,5 @@ export default function GamePlayer() {
     );
   }
 
-  clearPlayerToken();
-  return (
-    <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-6 p-6">
-      <h1 className="text-[2.73rem] font-black text-white leading-none">
-        Indovina<span className="text-yellow-400">Chi</span>
-      </h1>
-      <div className="text-center">
-        <div className="text-7xl mb-4">🎉</div>
-        <h2 className="text-white font-black text-3xl">Gioco concluso</h2>
-        <p className="text-light mt-2">Grazie per aver partecipato.</p>
-      </div>
-      <button onClick={() => nav('/')} className="btn-white">Torna alla home</button>
-    </div>
-  );
+  return null;
 }
