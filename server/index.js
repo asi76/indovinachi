@@ -1044,10 +1044,22 @@ app.post('/api/sessions/:code/reveal/player', requireRemoteSession, async (req, 
 
 app.post('/api/sessions/:code/reveal/finish', requireRemoteSession, async (req, res) => {
   try {
+    const players = await getPlayersByCode(req.pocketBase, req.sessionRecord.code);
+    const responses = await getResponsesByCode(req.pocketBase, req.sessionRecord.code);
+
+    await Promise.all(responses.map((entry) => req.pocketBase.collection(RESPONSE_COLLECTION).delete(entry.id)));
+    await Promise.all(players.map((player) => req.pocketBase.collection(PLAYER_COLLECTION).delete(player.id)));
+
     const updated = await req.pocketBase.collection(SESSION_COLLECTION).update(req.sessionRecord.id, {
       status: 'finished',
+      revealQueue: [],
+      currentQuestionIndex: -1,
+      currentAnswerIndex: -1,
+      currentQuestionText: '',
       revealPhase: 'complete',
       currentAnswerText: '',
+      assignedQuestionIds: serializeAssignmentState(assignmentState(req.sessionRecord).mode, []),
+      discoSpin: nextDiscoSpin(req.sessionRecord.discoSpin),
     });
     const session = await buildSessionView(req.pocketBase, updated);
     res.json({ session });

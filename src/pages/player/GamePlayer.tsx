@@ -234,14 +234,30 @@ export default function GamePlayer() {
 
   if (session.status === 'revealing') {
     return (
-      <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-6 p-6">
+      <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-5 p-6">
         <h1 className="text-[2.73rem] font-black text-white leading-none">
           Indovina<span className="text-yellow-400">Chi</span>
         </h1>
-        <div className="card w-full max-w-lg text-center">
-          <p className="text-purple-500 font-black tracking-widest mb-2">REVEAL LIVE</p>
-          <h2 className="text-2xl font-black text-gray-800 mb-4">{session.currentQuestionText || 'Guarda il maxischermo'}</h2>
-          <p className="text-gray-500 font-semibold">{session.currentAnswerText || 'Il telecomando sta per mostrare una risposta casuale.'}</p>
+        {session.currentQuestionText ? (
+          <div className="card w-full max-w-lg text-center">
+            <h2 className="text-2xl font-black text-gray-800">{session.currentQuestionText}</h2>
+          </div>
+        ) : null}
+        {session.currentAnswerText ? (
+          <div className="bg-yellow-400 text-gray-900 rounded-3xl shadow-xl w-full max-w-lg px-6 py-5 text-center">
+            <p className="font-black text-2xl leading-tight">{session.currentAnswerText}</p>
+          </div>
+        ) : null}
+        <div className="w-full max-w-lg">
+          <h2 className="text-white text-center font-black text-2xl mb-3">Indovina Chi?</h2>
+          <div className="grid grid-cols-2 gap-2">
+            {session.players.map((entry) => (
+              <div key={entry.id} className="bg-white/15 text-white rounded-2xl px-3 py-3 text-center">
+                <div className="text-3xl mb-1">{entry.avatar}</div>
+                <div className="font-black text-sm leading-tight">{entry.nickname}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
