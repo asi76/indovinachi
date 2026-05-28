@@ -91,10 +91,10 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
             style={{ perspective: 1400 }}
           >
             <motion.div
-              animate={{ rotateX: showAnswerPlayer ? -180 : 0 }}
+              animate={{ rotateY: showAnswerPlayer ? 180 : 0 }}
               transition={{ duration: 0.7, ease: 'easeInOut' }}
               className="relative min-h-[14rem]"
-              style={{ transformStyle: 'preserve-3d', transformOrigin: 'bottom center' }}
+              style={{ transformStyle: 'preserve-3d', transformOrigin: 'center center' }}
             >
               <div
                 className="absolute inset-0 bg-yellow-400 text-gray-900 rounded-3xl px-10 py-6 text-center shadow-2xl flex flex-col items-center justify-center"
@@ -104,7 +104,7 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
               </div>
               <div
                 className="absolute inset-0 bg-white text-gray-900 rounded-3xl px-10 py-6 text-center shadow-2xl flex flex-col items-center justify-center"
-                style={{ backfaceVisibility: 'hidden', transform: 'rotateX(180deg)' }}
+                style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
               >
                 <p className="text-6xl mb-3">{answerPlayer?.avatar}</p>
                 <p className="font-black text-[3rem] leading-tight">{answerPlayer?.nickname || ''}</p>

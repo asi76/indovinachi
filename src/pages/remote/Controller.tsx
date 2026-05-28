@@ -62,8 +62,8 @@ export default function RemoteController({ sessionCode, token }: { sessionCode: 
 
   const canOpenCollect = ['draft', 'lobby', 'finished'].includes(session.status);
   const canStartSession = ['collecting', 'ready'].includes(session.status) && session.answeredCount > 0;
-  const canQuestion = session.status === 'revealing' || session.answeredCount > 0;
-  const canAnswer = session.status === 'revealing' && Boolean(session.currentQuestionText);
+  const canQuestion = session.status === 'revealing' && ['idle', 'complete'].includes(session.revealPhase);
+  const canAnswer = session.status === 'revealing' && session.revealPhase === 'question' && Boolean(session.currentQuestionText);
   const canPlayer = session.status === 'revealing' && session.revealPhase === 'answer' && Boolean(session.currentAnswerText);
   const canFinish = session.status === 'revealing' || session.status === 'finished';
 
