@@ -40,9 +40,28 @@ body { margin: 0 !important; }
 
 .btn-white:hover { background: #faf5ff; }
 
+.btn-purple:disabled,
+.btn-white:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.btn-purple:disabled:hover,
+.btn-white:disabled:hover {
+  background: #e5e7eb;
+}
+
 .btn-purple:active,
 .btn-white:active {
   transform: scale(0.95);
+}
+
+.btn-purple:disabled:active,
+.btn-white:disabled:active {
+  transform: none;
 }
 
 .input-field {
