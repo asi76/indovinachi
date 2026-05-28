@@ -3,23 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion } from 'framer-motion';
 import { signOutFromGoogle } from '../../lib/firebase';
-import { addQuestion, createHostSession, fetchHostSessions, fetchQuestionBank, importQuestions, openCollecting, saveHostSessionConfig, startSession } from '../../lib/sessionApi';
+import { createHostSession, fetchHostSessions, fetchQuestionBank, openCollecting, saveHostSessionConfig, startSession } from '../../lib/sessionApi';
 import { joinUrl, presenterUrl, remoteUrl, sessionStatusLabel } from '../../lib/game';
-import type { MultilingualQuestion, PublicSessionView } from '../../types';
+import type { MultilingualQuestion, PublicSessionView, QuestionMode } from '../../types';
 
 function parseLines(value: string) {
   return value.split('\n').map((entry) => entry.trim()).filter(Boolean);
-}
-
-function parseJsonQuestions(value: string) {
-  const parsed = JSON.parse(value);
-  const list = Array.isArray(parsed) ? parsed : parsed.questions;
-  if (!Array.isArray(list)) throw new Error('Il JSON deve contenere un array di domande');
-  return list.map((entry) => ({
-    IT: String(entry.IT || entry.it || '').trim(),
-    EN: String(entry.EN || entry.en || '').trim(),
-    SV: String(entry.SV || entry.sv || '').trim(),
-  })).filter((entry) => entry.IT && entry.EN && entry.SV);
 }
 
 export default function HostDashboard() {
@@ -31,9 +20,8 @@ export default function HostDashboard() {
   const [themeDraft, setThemeDraft] = useState('Party room viola, luci da quiz show, reveal teatrale');
   const [questionDraft, setQuestionDraft] = useState('');
   const [questionCountDraft, setQuestionCountDraft] = useState(3);
+  const [questionModeDraft, setQuestionModeDraft] = useState<QuestionMode>('direct');
   const [questionBank, setQuestionBank] = useState<MultilingualQuestion[]>([]);
-  const [manualQuestion, setManualQuestion] = useState({ IT: '', EN: '', SV: '' });
-  const [jsonDraft, setJsonDraft] = useState('');
 
   const session = useMemo(() => sessions[0] || null, [sessions]);
 
@@ -78,6 +66,7 @@ export default function HostDashboard() {
     setThemeDraft(session.theme);
     setQuestionDraft(session.questions.join('\n'));
     setQuestionCountDraft(session.questionCount || 3);
+    setQuestionModeDraft(session.questionMode || 'direct');
   }, [session?.id]);
 
   async function handleCreate() {
@@ -103,40 +92,11 @@ export default function HostDashboard() {
         theme: themeDraft.trim(),
         questions: parseLines(questionDraft),
         questionCount: questionCountDraft,
+        questionMode: questionModeDraft,
       });
       setSessions([updated]);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Salvataggio fallito');
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function handleAddManualQuestion() {
-    setBusy('question');
-    setError('');
-    try {
-      const created = await addQuestion(manualQuestion);
-      setQuestionBank((current) => [created, ...current]);
-      setManualQuestion({ IT: '', EN: '', SV: '' });
-    } catch (questionError) {
-      setError(questionError instanceof Error ? questionError.message : 'Domanda non salvata');
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function handleImportQuestions() {
-    setBusy('import');
-    setError('');
-    try {
-      const questions = parseJsonQuestions(jsonDraft);
-      if (questions.length === 0) throw new Error('Nessuna domanda valida trovata nel JSON');
-      await importQuestions(questions);
-      setJsonDraft('');
-      setQuestionBank(await fetchQuestionBank());
-    } catch (importError) {
-      setError(importError instanceof Error ? importError.message : 'Import JSON fallito');
     } finally {
       setBusy(null);
     }
@@ -170,9 +130,12 @@ export default function HostDashboard() {
     }
   }
 
-  const canCollect = Boolean(session && (questionBank.length > 0 || parseLines(questionDraft).length > 0));
+  const directQuestionCount = parseLines(questionDraft).length;
+  const canCollect = Boolean(session && (
+    questionModeDraft === 'direct' ? directQuestionCount > 0 : questionBank.length > 0
+  ));
   const canStart = Boolean(session && session.answeredCount > 0);
-  const canAddManual = Boolean(manualQuestion.IT.trim() && manualQuestion.EN.trim() && manualQuestion.SV.trim());
+  const questionsPerPlayerPreview = questionModeDraft === 'direct' ? directQuestionCount : questionCountDraft;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -242,20 +205,44 @@ export default function HostDashboard() {
                 </div>
               </div>
 
-              <div className="mb-5">
-                <label className="block text-xs font-black tracking-widest text-gray-500 mb-2">Domande per giocatore al check-in</label>
-                <input
-                  className="input-field max-w-[180px]"
-                  type="number"
-                  min={1}
-                  max={24}
-                  value={questionCountDraft}
-                  onChange={(e) => setQuestionCountDraft(Math.max(1, Math.min(24, Number(e.target.value) || 1)))}
-                />
+              <div className="mb-5 rounded-2xl border border-purple-100 bg-purple-50/60 p-4">
+                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                  <div>
+                    <label className="block text-xs font-black tracking-widest text-gray-500 mb-2">Assegnazione al check-in</label>
+                    <button
+                      type="button"
+                      onClick={() => setQuestionModeDraft((current) => (current === 'direct' ? 'random' : 'direct'))}
+                      className="inline-flex items-center gap-3 rounded-full bg-white px-4 py-2 font-black text-gray-800 shadow-sm"
+                    >
+                      <span className={`h-7 w-12 rounded-full p-1 transition-colors ${questionModeDraft === 'random' ? 'bg-purple-700' : 'bg-gray-300'}`}>
+                        <span className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${questionModeDraft === 'random' ? 'translate-x-5' : ''}`} />
+                      </span>
+                      {questionModeDraft === 'direct' ? 'Domande dirette' : 'Domande casuali dal database'}
+                    </button>
+                  </div>
+
+                  <div className="md:w-[220px]">
+                    <label className="block text-xs font-black tracking-widest text-gray-500 mb-2">Numero casuali</label>
+                    <input
+                      className="input-field"
+                      type="number"
+                      min={1}
+                      max={24}
+                      value={questionCountDraft}
+                      disabled={questionModeDraft === 'direct'}
+                      onChange={(e) => setQuestionCountDraft(Math.max(1, Math.min(24, Number(e.target.value) || 1)))}
+                    />
+                  </div>
+                </div>
+                <div className="mt-3 text-sm font-bold text-purple-800">
+                  {questionModeDraft === 'direct'
+                    ? `${directQuestionCount} domande dirette verranno date uguali a tutti i giocatori.`
+                    : `${questionBank.length} domande attive nel database, ${questionCountDraft} per ogni giocatore.`}
+                </div>
               </div>
 
               <div className="mb-5">
-                <label className="block text-xs font-black tracking-widest text-gray-500 mb-2">Domande legacy sessione</label>
+                <label className="block text-xs font-black tracking-widest text-gray-500 mb-2">Domande dirette</label>
                 <textarea
                   className="input-field min-h-[180px]"
                   value={questionDraft}
@@ -265,39 +252,15 @@ export default function HostDashboard() {
               </div>
 
               <div className="border-t border-gray-100 pt-5 mt-5">
-                <div className="flex items-center justify-between gap-3 mb-4">
-                  <h4 className="text-xl font-black text-gray-800">Amministrazione domande</h4>
-                  <span className="text-sm font-black text-purple-700 bg-purple-50 px-3 py-1 rounded-full">{questionBank.length} nel database</span>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <h4 className="text-xl font-black text-gray-800">Database domande</h4>
+                    <p className="text-sm font-bold text-gray-500">{questionBank.length} domande attive disponibili per la modalita casuale</p>
+                  </div>
+                  <button onClick={() => nav('/host/admin/questions')} className="btn-white">
+                    Gestisci database
+                  </button>
                 </div>
-                <div className="grid md:grid-cols-3 gap-3 mb-3">
-                  <textarea className="input-field min-h-[92px]" placeholder="IT" value={manualQuestion.IT} onChange={(e) => setManualQuestion((current) => ({ ...current, IT: e.target.value }))} />
-                  <textarea className="input-field min-h-[92px]" placeholder="EN" value={manualQuestion.EN} onChange={(e) => setManualQuestion((current) => ({ ...current, EN: e.target.value }))} />
-                  <textarea className="input-field min-h-[92px]" placeholder="SV" value={manualQuestion.SV} onChange={(e) => setManualQuestion((current) => ({ ...current, SV: e.target.value }))} />
-                </div>
-                <button onClick={() => void handleAddManualQuestion()} className="btn-white mb-5" disabled={busy === 'question' || !canAddManual}>
-                  {busy === 'question' ? 'Aggiungo...' : 'Aggiungi domanda'}
-                </button>
-
-                <label className="block text-xs font-black tracking-widest text-gray-500 mb-2">Import JSON multilingua</label>
-                <input
-                  className="block w-full text-sm font-semibold text-gray-600 mb-3"
-                  type="file"
-                  accept="application/json,.json"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (!file) return;
-                    void file.text().then(setJsonDraft);
-                  }}
-                />
-                <textarea
-                  className="input-field min-h-[130px] mb-3"
-                  value={jsonDraft}
-                  onChange={(e) => setJsonDraft(e.target.value)}
-                  placeholder={'[{"IT":"Domanda...","EN":"Question...","SV":"Fraga..."}]'}
-                />
-                <button onClick={() => void handleImportQuestions()} className="btn-white" disabled={busy === 'import' || !jsonDraft.trim()}>
-                  {busy === 'import' ? 'Importo...' : 'Importa JSON'}
-                </button>
               </div>
 
               <div className="flex flex-wrap gap-3">
@@ -344,7 +307,7 @@ export default function HostDashboard() {
                     <div className="text-xs font-black text-gray-500 tracking-widest">RISPOSTE</div>
                   </div>
                   <div className="bg-gray-50 rounded-2xl p-4 text-center">
-                    <div className="text-3xl font-black text-gray-900">{session.questionCount}</div>
+                    <div className="text-3xl font-black text-gray-900">{questionsPerPlayerPreview}</div>
                     <div className="text-xs font-black text-gray-500 tracking-widest">DOMANDE</div>
                   </div>
                 </div>

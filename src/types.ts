@@ -1,5 +1,6 @@
 export type SessionStatus = 'draft' | 'lobby' | 'collecting' | 'ready' | 'revealing' | 'finished' | 'terminated';
 export type RevealPhase = 'idle' | 'question' | 'answer' | 'complete';
+export type QuestionMode = 'direct' | 'random';
 
 export interface RevealAnswerEntry {
   playerId: string;
@@ -32,6 +33,7 @@ export interface IcebreakerSessionRecord {
   status: SessionStatus;
   questions: string[];
   questionCount: number;
+  questionMode: QuestionMode;
   assignedQuestionIds: string[];
   presenterToken: string;
   remoteToken: string;

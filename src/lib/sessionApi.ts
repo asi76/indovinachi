@@ -1,6 +1,6 @@
 import { auth } from './firebase';
 import { pb } from './pocketbase';
-import type { IcebreakerPlayerRecord, MultilingualQuestion, PublicSessionView } from '../types';
+import type { IcebreakerPlayerRecord, MultilingualQuestion, PublicSessionView, QuestionMode } from '../types';
 
 async function authorizedFetch(path: string, init?: RequestInit) {
   const token = await auth.currentUser?.getIdToken();
@@ -28,7 +28,7 @@ export async function createHostSession(): Promise<PublicSessionView> {
   return payload.session as PublicSessionView;
 }
 
-export async function saveHostSessionConfig(code: string, config: { title: string; theme: string; questions: string[]; questionCount: number }): Promise<PublicSessionView> {
+export async function saveHostSessionConfig(code: string, config: { title: string; theme: string; questions: string[]; questionCount: number; questionMode: QuestionMode }): Promise<PublicSessionView> {
   const payload = await authorizedFetch(`/api/sessions/${code}/config`, {
     method: 'PATCH',
     body: JSON.stringify(config),

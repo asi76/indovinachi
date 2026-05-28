@@ -120,6 +120,32 @@ function normalizeQuestionCount(value) {
   return Math.max(1, Math.min(24, Math.trunc(count)));
 }
 
+function normalizeQuestionMode(value) {
+  return value === 'random' ? 'random' : 'direct';
+}
+
+function assignmentState(sessionRecord) {
+  const raw = sessionRecord?.assignedQuestionIds;
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    return {
+      mode: normalizeQuestionMode(raw.mode ?? sessionRecord.questionMode),
+      used: Array.isArray(raw.used) ? raw.used.map((item) => String(item || '')).filter(Boolean) : [],
+    };
+  }
+
+  return {
+    mode: normalizeQuestionMode(sessionRecord?.questionMode),
+    used: Array.isArray(raw) ? raw.map((item) => String(item || '')).filter(Boolean) : [],
+  };
+}
+
+function serializeAssignmentState(mode, used = []) {
+  return {
+    mode: normalizeQuestionMode(mode),
+    used: Array.isArray(used) ? used.map((item) => String(item || '')).filter(Boolean) : [],
+  };
+}
+
 function normalizeMultilingualQuestion(entry) {
   const question = {
     externalId: entry?.externalId ?? entry?.id ?? '',
@@ -202,19 +228,25 @@ async function ensureDefaultQuestions(pocketBase) {
 }
 
 async function pickQuestionsForPlayer(pocketBase, sessionRecord) {
-  await ensureDefaultQuestions(pocketBase);
-  const bank = await getActiveQuestions(pocketBase);
+  const state = assignmentState(sessionRecord);
   const fallback = normalizeQuestions(sessionRecord.questions).map((text, index) => ({
-    id: `legacy-${index}`,
+    id: `direct-${index}`,
     IT: text,
     EN: text,
     SV: text,
   }));
+
+  if (state.mode === 'direct') {
+    return fallback;
+  }
+
+  await ensureDefaultQuestions(pocketBase);
+  const bank = await getActiveQuestions(pocketBase);
   if (bank.length === 0) return fallback.slice(0, normalizeQuestionCount(sessionRecord.questionCount || fallback.length || 3));
 
   const count = Math.min(normalizeQuestionCount(sessionRecord.questionCount), Math.max(bank.length, 1));
   const selected = [];
-  let used = Array.isArray(sessionRecord.assignedQuestionIds) ? [...sessionRecord.assignedQuestionIds] : [];
+  let used = [...state.used];
   let available = bank.filter((question) => !used.includes(question.id));
 
   while (selected.length < count) {
@@ -230,7 +262,7 @@ async function pickQuestionsForPlayer(pocketBase, sessionRecord) {
   }
 
   await pocketBase.collection(SESSION_COLLECTION).update(sessionRecord.id, {
-    assignedQuestionIds: used,
+    assignedQuestionIds: serializeAssignmentState(state.mode, used),
   });
 
   return selected.map(questionView);
@@ -349,6 +381,7 @@ async function getResponsesByCode(pocketBase, code) {
 }
 
 async function resetSessionForCollecting(pocketBase, sessionRecord, questions) {
+  const state = assignmentState(sessionRecord);
   const players = await getPlayersByCode(pocketBase, sessionRecord.code);
   const responses = await getResponsesByCode(pocketBase, sessionRecord.code);
 
@@ -369,11 +402,13 @@ async function resetSessionForCollecting(pocketBase, sessionRecord, questions) {
     currentQuestionText: '',
     currentAnswerText: '',
     revealPhase: 'idle',
+    assignedQuestionIds: serializeAssignmentState(state.mode, []),
     discoSpin: nextDiscoSpin(sessionRecord.discoSpin),
   });
 }
 
 async function buildSessionView(pocketBase, record) {
+  const state = assignmentState(record);
   const players = await getPlayersByCode(pocketBase, record.code);
   const answeredCount = players.filter((entry) => Boolean(entry.submitted)).length;
   const allAnswered = players.length > 0 && answeredCount === players.length;
@@ -394,7 +429,8 @@ async function buildSessionView(pocketBase, record) {
     status: record.status || 'draft',
     questions: Array.isArray(record.questions) ? record.questions : [],
     questionCount: normalizeQuestionCount(record.questionCount),
-    assignedQuestionIds: Array.isArray(record.assignedQuestionIds) ? record.assignedQuestionIds : [],
+    questionMode: state.mode,
+    assignedQuestionIds: state.used,
     presenterToken: record.presenterToken || '',
     remoteToken: record.remoteToken || '',
     revealQueue: Array.isArray(record.revealQueue) ? record.revealQueue : [],
@@ -648,7 +684,7 @@ app.post('/api/sessions', requireAuthorizedHost, async (req, res) => {
       status: 'draft',
       questions: [],
       questionCount: 3,
-      assignedQuestionIds: [],
+      assignedQuestionIds: serializeAssignmentState('direct', []),
       presenterToken: generateToken(),
       remoteToken: generateToken(),
       revealQueue: [],
@@ -739,6 +775,7 @@ app.patch('/api/sessions/:code/config', requireAuthorizedHost, requireOwnedSessi
       theme: String(req.body?.theme || '').trim().slice(0, 280),
       questions: normalizeQuestions(req.body?.questions),
       questionCount: normalizeQuestionCount(req.body?.questionCount),
+      assignedQuestionIds: serializeAssignmentState(req.body?.questionMode, []),
       status: 'lobby',
     });
     const session = await buildSessionView(req.pocketBase, updated);
@@ -754,7 +791,11 @@ app.post('/api/sessions/:code/start-collecting', requireAuthorizedHost, requireO
     await ensureDefaultQuestions(req.pocketBase);
     const bank = await getActiveQuestions(req.pocketBase);
     const questions = normalizeQuestions(req.sessionRecord.questions);
-    if (bank.length === 0 && questions.length === 0) {
+    const questionMode = assignmentState(req.sessionRecord).mode;
+    if (questionMode === 'direct' && questions.length === 0) {
+      return res.status(400).json({ error: 'Inserisci almeno una domanda diretta prima di aprire la raccolta' });
+    }
+    if (questionMode === 'random' && bank.length === 0) {
       return res.status(400).json({ error: 'Inserisci almeno una domanda nel database prima di aprire la raccolta' });
     }
     const updated = await resetSessionForCollecting(req.pocketBase, req.sessionRecord, questions);
@@ -771,7 +812,11 @@ app.post('/api/sessions/:code/collect/open', requireRemoteSession, async (req, r
     await ensureDefaultQuestions(req.pocketBase);
     const bank = await getActiveQuestions(req.pocketBase);
     const questions = normalizeQuestions(req.sessionRecord.questions);
-    if (bank.length === 0 && questions.length === 0) {
+    const questionMode = assignmentState(req.sessionRecord).mode;
+    if (questionMode === 'direct' && questions.length === 0) {
+      return res.status(400).json({ error: 'Inserisci almeno una domanda diretta prima di aprire la raccolta' });
+    }
+    if (questionMode === 'random' && bank.length === 0) {
       return res.status(400).json({ error: 'Inserisci almeno una domanda nel database prima di aprire la raccolta' });
     }
     const updated = await resetSessionForCollecting(req.pocketBase, req.sessionRecord, questions);
