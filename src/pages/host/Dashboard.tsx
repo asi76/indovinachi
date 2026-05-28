@@ -107,6 +107,13 @@ export default function HostDashboard() {
     setBusy('collect');
     setError('');
     try {
+      await saveHostSessionConfig(session.code, {
+        title: titleDraft.trim() || 'Indovina Chi',
+        theme: themeDraft.trim(),
+        questions: parseLines(questionDraft),
+        questionCount: questionCountDraft,
+        questionMode: questionModeDraft,
+      });
       const updated = await openCollecting(session.code);
       setSessions([updated]);
     } catch (collectError) {
