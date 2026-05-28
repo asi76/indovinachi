@@ -193,15 +193,20 @@ export default function HostDashboard() {
             <h2 className="text-3xl font-black text-gray-800">Sessione attiva</h2>
             <p className="text-gray-500 font-semibold mt-1">Stessa impostazione grafica di Quizzone, ma dedicata al reveal di Indovina Chi.</p>
           </div>
-          {!session ? (
-            <button onClick={() => void handleCreate()} className="btn-purple" disabled={busy === 'create'}>
-              {busy === 'create' ? 'Creo...' : 'Crea sessione'}
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <button onClick={() => nav('/host/admin/questions')} className="btn-white">
+              Admin domande
             </button>
-          ) : (
-            <button onClick={() => nav(`/host/game/${session.code}`)} className="btn-purple">
-              Apri maxischermo
-            </button>
-          )}
+            {!session ? (
+              <button onClick={() => void handleCreate()} className="btn-purple" disabled={busy === 'create'}>
+                {busy === 'create' ? 'Creo...' : 'Crea sessione'}
+              </button>
+            ) : (
+              <button onClick={() => nav(`/host/game/${session.code}`)} className="btn-purple">
+                Apri maxischermo
+              </button>
+            )}
+          </div>
         </div>
 
         {error ? (

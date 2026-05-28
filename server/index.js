@@ -556,6 +556,32 @@ app.post('/api/questions', requireAuthorizedHost, async (req, res) => {
   }
 });
 
+app.patch('/api/questions/:id', requireAuthorizedHost, async (req, res) => {
+  try {
+    const normalized = normalizeMultilingualQuestion(req.body);
+    if (!normalized) {
+      return res.status(400).json({ error: 'La domanda deve avere traduzione IT, EN e SV' });
+    }
+    const pocketBase = await authenticatePocketBase();
+    const updated = await pocketBase.collection(QUESTION_COLLECTION).update(req.params.id, normalized);
+    res.json({ question: questionView(updated) });
+  } catch (error) {
+    console.error('[updateQuestion]', error);
+    res.status(500).json({ error: 'Impossibile aggiornare la domanda' });
+  }
+});
+
+app.delete('/api/questions/:id', requireAuthorizedHost, async (req, res) => {
+  try {
+    const pocketBase = await authenticatePocketBase();
+    await pocketBase.collection(QUESTION_COLLECTION).update(req.params.id, { active: false });
+    res.json({ deleted: true });
+  } catch (error) {
+    console.error('[deleteQuestion]', error);
+    res.status(500).json({ error: 'Impossibile eliminare la domanda' });
+  }
+});
+
 app.post('/api/questions/import', requireAuthorizedHost, async (req, res) => {
   try {
     const list = Array.isArray(req.body?.questions) ? req.body.questions : [];

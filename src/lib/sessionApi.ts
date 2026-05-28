@@ -144,6 +144,20 @@ export async function addQuestion(question: Omit<MultilingualQuestion, 'id'>): P
   return payload.question as MultilingualQuestion;
 }
 
+export async function updateQuestion(id: string, question: Omit<MultilingualQuestion, 'id'>): Promise<MultilingualQuestion> {
+  const payload = await authorizedFetch(`/api/questions/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(question),
+  });
+  return payload.question as MultilingualQuestion;
+}
+
+export async function deleteQuestion(id: string): Promise<void> {
+  await authorizedFetch(`/api/questions/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function importQuestions(questions: Array<Partial<MultilingualQuestion>>): Promise<{ imported: number; total: number }> {
   const payload = await authorizedFetch('/api/questions/import', {
     method: 'POST',
