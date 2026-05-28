@@ -7,8 +7,13 @@ import { joinUrl } from '../../lib/game';
 import type { PublicSessionView } from '../../types';
 
 function waitingMessage(session: PublicSessionView) {
-  if (session.status === 'collecting') return `${session.answeredCount}/${session.playerCount} hanno gia inviato le risposte`;
-  if (session.status === 'ready') return 'Tutti hanno risposto. Premi Inizia sessione dal telecomando.';
+  if (session.status === 'collecting' || session.status === 'ready') {
+    const pendingPlayers = session.players.filter((player) => !player.submitted);
+    if (pendingPlayers.length === 0) return 'Tutti pronti per iniziare il gioco!';
+    const pendingNames = pendingPlayers.map((player) => player.nickname).join(', ') || 'nessuno';
+    const label = pendingPlayers.length === 1 ? 'giocatore deve' : 'giocatori devono';
+    return `${pendingPlayers.length} ${label} ancora inviare le risposte (${pendingNames})`;
+  }
   if (session.status === 'lobby' || session.status === 'draft') return 'Scansiona il QR, scegli il tuo avatar ed entra in sala.';
   return 'Preparazione sessione';
 }
@@ -110,7 +115,6 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
 
       <div className="text-center">
         <h2 className="text-white font-black text-[1.91rem]">{session.title}</h2>
-        <p className="text-purple-300 mt-1">{session.questions.length} domande pronte</p>
       </div>
 
       <div className="text-center w-full max-w-lg">
