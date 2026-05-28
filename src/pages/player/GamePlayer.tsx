@@ -4,7 +4,23 @@ import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { clearPlayerToken, loadPlayerToken } from '../../lib/game';
 import { fetchPlayer, fetchPublicSession, resolveQuestionText, submitPlayerResponses } from '../../lib/sessionApi';
-import type { IcebreakerPlayerRecord, PublicSessionView } from '../../types';
+import type { IcebreakerPlayerRecord, PublicSessionView, QuestionLanguage } from '../../types';
+
+const languageOptions: Array<{ code: QuestionLanguage; flag: string; label: string }> = [
+  { code: 'IT', flag: '🇮🇹', label: 'IT' },
+  { code: 'SV', flag: '🇸🇪', label: 'SV' },
+  { code: 'EN', flag: '🇬🇧', label: 'EN' },
+];
+
+function initialQuestionLanguage(): QuestionLanguage {
+  const saved = window.localStorage.getItem('indovinachi-question-language');
+  if (saved === 'IT' || saved === 'SV' || saved === 'EN') return saved;
+
+  const browserLanguage = navigator.language.toLowerCase();
+  if (browserLanguage.startsWith('sv')) return 'SV';
+  if (browserLanguage.startsWith('en')) return 'EN';
+  return 'IT';
+}
 
 export default function GamePlayer() {
   const { code, playerId } = useParams();
@@ -15,6 +31,12 @@ export default function GamePlayer() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [questionLanguage, setQuestionLanguage] = useState<QuestionLanguage>(initialQuestionLanguage);
+
+  function handleLanguageChange(nextLanguage: QuestionLanguage) {
+    setQuestionLanguage(nextLanguage);
+    window.localStorage.setItem('indovinachi-question-language', nextLanguage);
+  }
 
   useEffect(() => {
     if (!code || !playerId) {
@@ -79,7 +101,7 @@ export default function GamePlayer() {
     setSubmitting(true);
     setError('');
     try {
-      const updatedPlayer = await submitPlayerResponses(session, player, normalizedAnswers);
+      const updatedPlayer = await submitPlayerResponses(session, player, normalizedAnswers, questionLanguage);
       setPlayer(updatedPlayer);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Invio fallito');
@@ -145,10 +167,28 @@ export default function GamePlayer() {
 
         <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex flex-col gap-3">
           <div className="bg-white rounded-3xl shadow-xl p-5 overflow-y-auto flex-1 flex flex-col gap-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-black tracking-widest text-purple-500">LINGUA</span>
+              <div className="flex items-center gap-2 rounded-full bg-purple-50 p-1">
+                {languageOptions.map((option) => (
+                  <button
+                    key={option.code}
+                    type="button"
+                    onClick={() => handleLanguageChange(option.code)}
+                    className={`h-10 min-w-[74px] rounded-full px-3 text-sm font-black transition-colors ${questionLanguage === option.code ? 'bg-purple-700 text-white shadow' : 'bg-white text-purple-700'}`}
+                    aria-pressed={questionLanguage === option.code}
+                  >
+                    <span className="mr-1" aria-hidden="true">{option.flag}</span>
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {playerQuestions.map((question, index) => (
               <label key={`${session.code}-${question.id}-${index}`} className="block">
                 <span className="block text-xs font-black tracking-widest text-purple-500 mb-2">DOMANDA {index + 1}</span>
-                <strong className="block text-gray-800 text-xl font-black mb-3">{resolveQuestionText(question)}</strong>
+                <strong className="block text-gray-800 text-xl font-black mb-3">{resolveQuestionText(question, questionLanguage)}</strong>
                 <textarea
                   value={answers[index] || ''}
                   onChange={(event) => setAnswers((current) => ({ ...current, [index]: event.target.value }))}

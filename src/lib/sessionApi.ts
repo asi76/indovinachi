@@ -1,6 +1,6 @@
 import { auth } from './firebase';
 import { pb } from './pocketbase';
-import type { IcebreakerPlayerRecord, MultilingualQuestion, PublicSessionView, QuestionMode } from '../types';
+import type { IcebreakerPlayerRecord, MultilingualQuestion, PublicSessionView, QuestionLanguage, QuestionMode } from '../types';
 
 async function authorizedFetch(path: string, init?: RequestInit) {
   const token = await auth.currentUser?.getIdToken();
@@ -101,7 +101,7 @@ export async function ensureNicknameAvailable(sessionCode: string, nickname: str
   return duplicates.totalItems === 0;
 }
 
-export async function submitPlayerResponses(session: PublicSessionView, player: IcebreakerPlayerRecord, answers: string[]) {
+export async function submitPlayerResponses(session: PublicSessionView, player: IcebreakerPlayerRecord, answers: string[], language?: QuestionLanguage) {
   const existing = await pb.collection('icebreaker_responses').getFullList({
     filter: `sessionCode="${session.code}" && playerId="${player.id}"`,
   });
@@ -122,7 +122,7 @@ export async function submitPlayerResponses(session: PublicSessionView, player: 
       playerAvatar: player.avatar,
       questionId: question?.id || `legacy-${index}`,
       questionIndex: index + 1,
-      questionText: resolveQuestionText(question),
+      questionText: resolveQuestionText(question, language),
       answerText: answer.trim(),
       submittedAt: new Date().toISOString(),
     });
@@ -169,8 +169,12 @@ export async function importQuestions(questions: Array<Partial<MultilingualQuest
   return { imported: Number(payload.imported || 0), total: Number(payload.total || 0) };
 }
 
-export function resolveQuestionText(question?: Partial<MultilingualQuestion>) {
+export function resolveQuestionText(question?: Partial<MultilingualQuestion>, preferredLanguage?: QuestionLanguage) {
   if (!question) return '';
+  if (preferredLanguage === 'SV') return question.SV || question.EN || question.IT || '';
+  if (preferredLanguage === 'EN') return question.EN || question.IT || question.SV || '';
+  if (preferredLanguage === 'IT') return question.IT || question.EN || question.SV || '';
+
   const language = navigator.language.toLowerCase();
   if (language.startsWith('sv')) return question.SV || question.EN || question.IT || '';
   if (language.startsWith('en')) return question.EN || question.IT || question.SV || '';
