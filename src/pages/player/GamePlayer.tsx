@@ -57,10 +57,11 @@ export default function GamePlayer() {
         if (!active) return;
         setSession(nextSession);
         setPlayer(nextPlayer);
-      } catch (loadError) {
+      } catch (loadError: any) {
         if (active) {
+          const isNotFound = loadError?.status === 404 || (loadError instanceof Error && loadError.message.includes("wasn't found"));
           const latestSession = await fetchPublicSession(currentCode).catch(() => null);
-          if (latestSession && ['finished', 'terminated'].includes(latestSession.status)) {
+          if (isNotFound || (latestSession && ['finished', 'terminated'].includes(latestSession.status))) {
             clearPlayerToken();
             nav(`/play/${currentCode}`, { replace: true });
             return;
