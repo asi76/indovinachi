@@ -112,36 +112,14 @@ export async function ensureNicknameAvailable(sessionCode: string, nickname: str
 }
 
 export async function submitPlayerResponses(session: PublicSessionView, player: IcebreakerPlayerRecord, answers: string[], language?: QuestionLanguage) {
-  const existing = await pb.collection('icebreaker_responses').getFullList({
-    filter: `sessionCode="${session.code}" && playerId="${player.id}"`,
+  const response = await fetch(`/api/sessions/${session.code}/players/${player.id}/responses`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ answers, language }),
   });
-  for (const entry of existing) {
-    await pb.collection('icebreaker_responses').delete(entry.id);
-  }
-
-  const questions = Array.isArray(player.questions) && player.questions.length > 0
-    ? player.questions
-    : session.questions.map((question, index) => ({ id: `legacy-${index}`, IT: question, EN: question, SV: question }));
-
-  for (const [index, answer] of answers.entries()) {
-    const question = questions[index];
-    await pb.collection('icebreaker_responses').create({
-      sessionCode: session.code,
-      playerId: player.id,
-      playerNickname: player.nickname,
-      playerAvatar: player.avatar,
-      questionId: question?.id || `legacy-${index}`,
-      questionIndex: index + 1,
-      questionText: resolveQuestionText(question, language),
-      answerText: answer.trim(),
-      submittedAt: new Date().toISOString(),
-    });
-  }
-
-  return pb.collection('icebreaker_players').update(player.id, {
-    submitted: true,
-    submittedAt: new Date().toISOString(),
-  }) as Promise<IcebreakerPlayerRecord>;
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || 'Invio fallito');
+  return payload.player as IcebreakerPlayerRecord;
 }
 
 export async function fetchQuestionBank(): Promise<MultilingualQuestion[]> {

@@ -203,6 +203,13 @@ function questionView(entry) {
   };
 }
 
+function resolveQuestionTextServer(question, preferredLanguage) {
+  if (!question) return '';
+  if (preferredLanguage === 'SV') return question.SV || question.EN || question.IT || '';
+  if (preferredLanguage === 'EN') return question.EN || question.IT || question.SV || '';
+  return question.IT || question.EN || question.SV || '';
+}
+
 function isSessionActive(status) {
   return !['finished', 'terminated'].includes(String(status || ''));
 }
@@ -473,18 +480,16 @@ async function resetSessionForCollecting(pocketBase, sessionRecord, questions) {
 }
 
 async function buildSessionView(pocketBase, record) {
+  if (record.status === 'ready') {
+    record = await pocketBase.collection(SESSION_COLLECTION).update(record.id, { status: 'collecting' });
+  }
+
   const state = assignmentState(record);
   const sessionClosed = ['finished', 'terminated'].includes(record.status);
   const players = sessionClosed ? [] : await getPlayersByCode(pocketBase, record.code);
   const answeredCount = players.filter((entry) => Boolean(entry.submitted)).length;
   const allAnswered = players.length > 0 && answeredCount === players.length;
-  const nextStatus = record.status === 'collecting' && allAnswered ? 'ready' : record.status;
   const currentAnswerPlayer = currentAnswerEntry(record);
-
-  if (nextStatus !== record.status) {
-    const updated = await pocketBase.collection(SESSION_COLLECTION).update(record.id, { status: nextStatus });
-    record = updated;
-  }
 
   return {
     id: record.id,
@@ -569,6 +574,10 @@ async function requireRemoteSession(req, res, next) {
 }
 
 async function startRevealForSession(pocketBase, sessionRecord) {
+  if (!['collecting', 'ready'].includes(sessionRecord.status)) {
+    throw new Error('Apri la raccolta prima di iniziare la sessione');
+  }
+
   const players = await getPlayersByCode(pocketBase, sessionRecord.code);
   if (players.length === 0) {
     throw new Error('Nessun partecipante presente');
@@ -784,7 +793,7 @@ app.post('/api/sessions/:code/join', async (req, res) => {
     if (!session) {
       return res.status(404).json({ error: 'Sessione non trovata' });
     }
-    if (['finished', 'terminated'].includes(session.status)) {
+    if (!['draft', 'lobby', 'collecting', 'ready'].includes(session.status)) {
       return res.status(400).json({ error: 'Sessione chiusa' });
     }
 
@@ -836,6 +845,78 @@ app.post('/api/sessions/:code/join', async (req, res) => {
   } catch (error) {
     console.error('[joinSession]', error);
     res.status(500).json({ error: 'Ingresso in sessione fallito' });
+  }
+});
+
+app.post('/api/sessions/:code/players/:playerId/responses', async (req, res) => {
+  try {
+    const pocketBase = await authenticatePocketBase();
+    const session = await getSessionByCode(pocketBase, req.params.code?.toUpperCase());
+    if (!session) {
+      return res.status(404).json({ error: 'Sessione non trovata' });
+    }
+    if (session.status !== 'collecting') {
+      return res.status(400).json({ error: 'La raccolta risposte e chiusa' });
+    }
+
+    const player = await pocketBase.collection(PLAYER_COLLECTION).getOne(req.params.playerId);
+    if (!player || player.sessionCode !== session.code) {
+      return res.status(404).json({ error: 'Giocatore non trovato per questa sessione' });
+    }
+
+    const answers = Array.isArray(req.body?.answers) ? req.body.answers.map((entry) => String(entry || '').trim()) : [];
+    const language = String(req.body?.language || '');
+    const questions = Array.isArray(player.questions) && player.questions.length > 0
+      ? player.questions
+      : normalizeQuestions(session.questions).map((question, index) => ({ id: `legacy-${index}`, IT: question, EN: question, SV: question }));
+
+    if (questions.length === 0 || answers.length !== questions.length || answers.some((answer) => !answer)) {
+      return res.status(400).json({ error: 'Compila tutte le risposte' });
+    }
+
+    const existing = await pocketBase.collection(RESPONSE_COLLECTION).getFullList({
+      filter: `sessionCode="${escapeFilter(session.code)}" && playerId="${escapeFilter(player.id)}"`,
+    });
+    await Promise.all(existing.map((entry) => pocketBase.collection(RESPONSE_COLLECTION).delete(entry.id)));
+
+    const submittedAt = new Date().toISOString();
+    await Promise.all(answers.map((answer, index) => {
+      const question = questions[index];
+      return pocketBase.collection(RESPONSE_COLLECTION).create({
+        sessionCode: session.code,
+        playerId: player.id,
+        playerNickname: player.nickname,
+        playerAvatar: player.avatar,
+        questionId: question?.id || `legacy-${index}`,
+        questionIndex: index + 1,
+        questionText: resolveQuestionTextServer(question, language),
+        answerText: answer,
+        submittedAt,
+      });
+    }));
+
+    const updatedPlayer = await pocketBase.collection(PLAYER_COLLECTION).update(player.id, {
+      submitted: true,
+      submittedAt,
+    });
+
+    res.json({
+      player: {
+        id: updatedPlayer.id,
+        sessionCode: updatedPlayer.sessionCode,
+        nickname: updatedPlayer.nickname,
+        avatar: updatedPlayer.avatar,
+        questions: Array.isArray(updatedPlayer.questions) ? updatedPlayer.questions : [],
+        submitted: Boolean(updatedPlayer.submitted),
+        joinedAt: updatedPlayer.joinedAt,
+        submittedAt: updatedPlayer.submittedAt || null,
+        created: updatedPlayer.created,
+        updated: updatedPlayer.updated,
+      },
+    });
+  } catch (error) {
+    console.error('[submitPlayerResponses]', error);
+    res.status(500).json({ error: 'Invio risposte fallito' });
   }
 });
 
