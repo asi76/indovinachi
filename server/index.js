@@ -1034,7 +1034,7 @@ app.post('/api/sessions/:code/players/:playerId/guess', async (req, res) => {
       playerNickname: voter.nickname,
       playerAvatar: voter.avatar,
       questionId: guessQuestionId(answerKey),
-      questionIndex: 0,
+      questionIndex: Math.max(1, Number(session.currentQuestionIndex || 0) + 1),
       questionText: 'guess',
       answerText: guessed.id,
       submittedAt: new Date().toISOString(),
