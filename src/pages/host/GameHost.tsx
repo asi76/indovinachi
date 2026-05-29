@@ -28,7 +28,7 @@ function GuessResultsModal({ session }: { session: PublicSessionView }) {
         animate={{ y: 0, opacity: 1, scale: 1 }}
         className="bg-white rounded-3xl shadow-2xl p-6 max-w-4xl w-full max-h-[86dvh] overflow-y-auto"
       >
-        <h3 className="text-gray-900 font-black text-3xl text-center mb-5">Secondo il pubblico</h3>
+        <h3 className="text-gray-900 font-black text-3xl text-center mb-5">Risultato votazione</h3>
         <div className="flex flex-col gap-3">
           {session.currentGuessSummary.length === 0 ? (
             <p className="text-gray-500 font-bold text-center py-4">Nessun voto ricevuto</p>
@@ -36,8 +36,8 @@ function GuessResultsModal({ session }: { session: PublicSessionView }) {
             <div key={entry.playerId} className="grid grid-cols-[1fr_auto] items-center gap-4">
               <div className="min-w-0">
                 <div className="flex items-center justify-between gap-3 mb-1">
-                  <span className="text-gray-900 font-black text-xl truncate">{entry.avatar} {entry.nickname}</span>
-                  <span className="text-purple-700 font-black text-xl">{entry.percentage}%</span>
+                  <span className="text-gray-900 font-black text-[1.625rem] leading-tight truncate">{entry.avatar} {entry.nickname}</span>
+                  <span className="text-purple-700 font-black text-[1.625rem] leading-tight">{entry.percentage}%</span>
                 </div>
                 <div className="h-4 bg-purple-100 rounded-full overflow-hidden">
                   <div className="h-full bg-yellow-400 rounded-full" style={{ width: `${Math.min(100, entry.percentage)}%` }} />

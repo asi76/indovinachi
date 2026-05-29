@@ -30,7 +30,7 @@ function GuessResultsModal({ session }: { session: PublicSessionView }) {
         animate={{ y: 0, opacity: 1, scale: 1 }}
         className="bg-white rounded-3xl shadow-2xl p-5 w-full max-w-lg max-h-[84dvh] overflow-y-auto"
       >
-        <h3 className="text-gray-900 font-black text-2xl text-center mb-4">Secondo il pubblico</h3>
+        <h3 className="text-gray-900 font-black text-2xl text-center mb-4">Risultato votazione</h3>
         <div className="flex flex-col gap-3">
           {session.currentGuessSummary.length === 0 ? (
             <p className="text-gray-500 font-bold text-center py-4">Nessun voto ricevuto</p>
@@ -38,8 +38,8 @@ function GuessResultsModal({ session }: { session: PublicSessionView }) {
             <div key={entry.playerId} className="grid grid-cols-[1fr_auto] items-center gap-3">
               <div className="min-w-0">
                 <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className="text-gray-900 font-black text-base truncate">{entry.avatar} {entry.nickname}</span>
-                  <span className="text-purple-700 font-black text-base">{entry.percentage}%</span>
+                  <span className="text-gray-900 font-black text-[1.3rem] leading-tight truncate">{entry.avatar} {entry.nickname}</span>
+                  <span className="text-purple-700 font-black text-[1.3rem] leading-tight">{entry.percentage}%</span>
                 </div>
                 <div className="h-3 bg-purple-100 rounded-full overflow-hidden">
                   <div className="h-full bg-yellow-400 rounded-full" style={{ width: `${Math.min(100, entry.percentage)}%` }} />
@@ -54,16 +54,18 @@ function GuessResultsModal({ session }: { session: PublicSessionView }) {
   );
 }
 
-function ConfirmedGuessModal({ player }: { player: IcebreakerPlayerRecord }) {
+function ConfirmedGuessModal({ player, onClose }: { player: IcebreakerPlayerRecord; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-5 z-50">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-5 z-50" onClick={onClose}>
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         className="bg-white rounded-3xl p-7 w-full max-w-sm text-center shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
       >
         <div className="text-7xl mb-4">{player.avatar}</div>
         <h3 className="text-gray-900 font-black text-3xl">{player.nickname}</h3>
+        <p className="text-gray-500 font-bold mt-4">Tocca fuori per cambiare voto</p>
       </motion.div>
     </div>
   );
@@ -327,27 +329,23 @@ export default function GamePlayer() {
         ) : null}
         {votingOpen ? (
           <div className="w-full max-w-lg">
-            {!confirmedGuess ? (
-              <>
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <h2 className="text-white font-black text-2xl">Indovina Chi?</h2>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {session.players.map((entry) => (
-                    <button
-                      key={entry.id}
-                      type="button"
-                      onClick={() => setSelectedGuessId(entry.id)}
-                      disabled={submittingGuess}
-                      className="min-h-[102px] rounded-2xl px-3 py-3 text-center transition-colors bg-white/15 text-white active:bg-white/25"
-                    >
-                      <div className="text-3xl mb-1">{entry.avatar}</div>
-                      <div className="font-black text-sm leading-tight">{entry.nickname}</div>
-                    </button>
-                  ))}
-                </div>
-              </>
-            ) : null}
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h2 className="text-white font-black text-2xl">Indovina Chi?</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {session.players.map((entry) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  onClick={() => setSelectedGuessId(entry.id)}
+                  disabled={submittingGuess}
+                  className={`min-h-[102px] rounded-2xl px-3 py-3 text-center transition-colors ${confirmedGuessId === entry.id ? 'bg-yellow-400 text-gray-900' : 'bg-white/15 text-white active:bg-white/25'}`}
+                >
+                  <div className="text-3xl mb-1">{entry.avatar}</div>
+                  <div className="font-black text-sm leading-tight">{entry.nickname}</div>
+                </button>
+              ))}
+            </div>
           </div>
         ) : showGuessResults ? null : (
           <div className="w-full max-w-lg bg-white/10 rounded-2xl px-5 py-4 text-center">
@@ -375,7 +373,9 @@ export default function GamePlayer() {
           </div>
         ) : null}
 
-        {confirmedGuess && !showGuessResults ? <ConfirmedGuessModal player={confirmedGuess} /> : null}
+        {confirmedGuess && !showGuessResults && !selectedGuess ? (
+          <ConfirmedGuessModal player={confirmedGuess} onClose={() => setConfirmedGuessId('')} />
+        ) : null}
         {showGuessResults ? <GuessResultsModal session={session} /> : null}
       </div>
     );
