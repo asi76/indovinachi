@@ -543,7 +543,7 @@ async function buildSessionView(pocketBase, record) {
   const allAnswered = players.length > 0 && answeredCount === players.length;
   const currentAnswerPlayer = currentAnswerEntry(record);
   const answerStartedAt = currentAnswerStartedAt(record);
-  const guessSummaryVisible = Boolean(currentAnswerVotesShownAt(record)) || record.revealPhase === 'complete';
+  const guessSummaryVisible = record.revealPhase === 'answer' && Boolean(currentAnswerVotesShownAt(record));
   const currentGuessSummary = await getGuessSummary(pocketBase, record, players);
 
   return {
