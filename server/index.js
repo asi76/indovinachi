@@ -1002,11 +1002,6 @@ app.post('/api/sessions/:code/players/:playerId/guess', async (req, res) => {
       return res.status(400).json({ error: 'Nessuna risposta attiva' });
     }
 
-    const elapsedMs = Date.now() - (Date.parse(currentAnswerStartedAt(session)) || 0);
-    if (elapsedMs > 10000) {
-      return res.status(400).json({ error: 'Countdown terminato' });
-    }
-
     const players = await getPlayersByCode(pocketBase, session.code);
     const voter = players.find((entry) => entry.id === req.params.playerId);
     const guessedPlayerId = String(req.body?.guessedPlayerId || '').trim();
@@ -1034,8 +1029,9 @@ app.post('/api/sessions/:code/players/:playerId/guess', async (req, res) => {
       answerText: guessed.id,
       submittedAt: new Date().toISOString(),
     });
+    const nextSession = await buildSessionView(pocketBase, session);
 
-    res.json({ guess: { guessedPlayerId: guess.answerText } });
+    res.json({ guess: { guessedPlayerId: guess.answerText }, session: nextSession });
   } catch (error) {
     console.error('[submitPlayerGuess]', error);
     res.status(500).json({ error: 'Voto non registrato' });

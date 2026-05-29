@@ -55,6 +55,21 @@ function GuessResultsModal({ session }: { session: PublicSessionView }) {
   );
 }
 
+function ConfirmedGuessModal({ player }: { player: IcebreakerPlayerRecord }) {
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-5 z-50">
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="bg-white rounded-3xl p-7 w-full max-w-sm text-center shadow-2xl"
+      >
+        <div className="text-7xl mb-4">{player.avatar}</div>
+        <h3 className="text-gray-900 font-black text-3xl">{player.nickname}</h3>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function GamePlayer() {
   const { code, playerId } = useParams();
   const nav = useNavigate();
@@ -169,8 +184,9 @@ export default function GamePlayer() {
     setSubmittingGuess(true);
     setError('');
     try {
-      const guess = await submitPlayerGuess(session, player, selectedGuessId);
-      setConfirmedGuessId(guess.guessedPlayerId);
+      const result = await submitPlayerGuess(session, player, selectedGuessId);
+      setConfirmedGuessId(result.guess.guessedPlayerId);
+      if (result.session) setSession(result.session);
       setSelectedGuessId('');
     } catch (guessError) {
       setError(guessError instanceof Error ? guessError.message : 'Voto non registrato');
@@ -321,12 +337,7 @@ export default function GamePlayer() {
         ) : null}
         {votingOpen ? (
           <div className="w-full max-w-lg">
-            {confirmedGuess ? (
-              <div className="bg-white/10 rounded-2xl px-5 py-5 text-center">
-                <p className="text-white font-black text-2xl">Attendi</p>
-                <p className="text-purple-200 text-center font-bold mt-2">Scelta confermata: {confirmedGuess.avatar} {confirmedGuess.nickname}</p>
-              </div>
-            ) : (
+            {!confirmedGuess ? (
               <>
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <h2 className="text-white font-black text-2xl">Indovina Chi?</h2>
@@ -346,7 +357,7 @@ export default function GamePlayer() {
                   ))}
                 </div>
               </>
-            )}
+            ) : null}
           </div>
         ) : showGuessResults ? null : (
           <div className="w-full max-w-lg bg-white/10 rounded-2xl px-5 py-4 text-center">
@@ -374,6 +385,7 @@ export default function GamePlayer() {
           </div>
         ) : null}
 
+        {confirmedGuess && !showGuessResults ? <ConfirmedGuessModal player={confirmedGuess} /> : null}
         {showGuessResults ? <GuessResultsModal session={session} /> : null}
       </div>
     );

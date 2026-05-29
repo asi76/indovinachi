@@ -131,7 +131,10 @@ export async function submitPlayerGuess(session: PublicSessionView, player: Iceb
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || 'Voto non registrato');
-  return payload.guess as { guessedPlayerId: string };
+  return {
+    guess: payload.guess as { guessedPlayerId: string },
+    session: payload.session ? attachClientTiming(payload.session as PublicSessionView) : null,
+  };
 }
 
 export async function fetchQuestionBank(): Promise<MultilingualQuestion[]> {
