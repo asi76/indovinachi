@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AVATARS } from '../../lib/avatars';
 import { loadPlayerToken, randomAvatar, savePlayerToken } from '../../lib/game';
 import { ensureNicknameAvailable, fetchPublicSession, joinPlayer } from '../../lib/sessionApi';
+import IceBreakerLogo from '../../components/IceBreakerLogo';
 
 export default function Nickname() {
   const { code } = useParams();
@@ -77,11 +78,9 @@ export default function Nickname() {
   }
 
   return (
-    <div className="h-screen bg-purple-900 flex flex-col overflow-hidden">
+    <div className="h-screen app-bg flex flex-col overflow-hidden">
       <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="shrink-0 text-center pt-4 pb-1 px-4 relative">
-        <h1 className="text-[2.52rem] font-black text-white leading-none mb-2">
-          Indovina<span className="text-yellow-400">Chi</span>
-        </h1>
+        <IceBreakerLogo className="text-[2.52rem] mb-2" />
         <div className="text-purple-300 font-bold tracking-widest mb-1" style={{ fontSize: '1.04rem' }}>CODICE: {code}</div>
         <h2 className="text-white font-black" style={{ fontSize: '1.78rem' }}>Scegli avatar e nickname</h2>
       </motion.div>

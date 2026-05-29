@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { auth, signInWithGoogle, signOutFromGoogle } from '../lib/firebase';
 import { authorizeIndovinachiHost, requestIndovinachiAccess } from '../lib/auth';
+import IceBreakerLogo from '../components/IceBreakerLogo';
 
 export default function Home() {
   const nav = useNavigate();
@@ -57,16 +58,14 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-10 p-6">
+    <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-10 p-6">
       <motion.div
         initial={{ scale: 0.5, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 200 }}
         className="text-center"
       >
-        <h1 className="text-7xl font-black text-white tracking-tight leading-none">
-          Indovina<span className="text-yellow-400">Chi</span>
-        </h1>
+        <IceBreakerLogo className="text-7xl" />
         <p className="text-purple-300 text-xl font-semibold mt-2">Party game per scoprire chi ha scritto cosa</p>
       </motion.div>
 

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { authorizeIndovinachiHost, requestIndovinachiAccess } from '../../lib/auth';
 import { auth, onAuthStateChanged, signInWithGoogle, signOutFromGoogle } from '../../lib/firebase';
+import IceBreakerLogo from '../../components/IceBreakerLogo';
 
 export default function HostAuth() {
   const nav = useNavigate();
@@ -56,9 +57,9 @@ export default function HostAuth() {
   }
 
   return (
-    <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center p-4 gap-6">
+    <div className="min-h-screen app-bg flex flex-col items-center justify-center p-4 gap-6">
       <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-center">
-        <h1 className="text-4xl font-black text-white">Indovina<span className="text-yellow-400">Chi</span></h1>
+        <IceBreakerLogo className="text-4xl" />
         <p className="text-purple-300 mt-1">Portale host</p>
       </motion.div>
 

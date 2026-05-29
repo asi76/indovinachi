@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { fetchPublicSession } from '../../lib/sessionApi';
 import { loadPlayerToken } from '../../lib/game';
+import IceBreakerLogo from '../../components/IceBreakerLogo';
 
 export default function Join() {
   const [code, setCode] = useState('');
@@ -44,11 +45,9 @@ export default function Join() {
   }
 
   return (
-    <div className="h-screen bg-purple-900 flex flex-col items-center justify-center p-6 gap-6 overflow-hidden">
+    <div className="h-screen app-bg flex flex-col items-center justify-center p-6 gap-6 overflow-hidden">
       <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 220 }} className="text-center">
-        <h1 className="text-6xl font-black text-white leading-none">
-          Indovina<span className="text-yellow-400">Chi</span>
-        </h1>
+        <IceBreakerLogo className="text-6xl" />
         <p className="text-purple-300 font-semibold mt-1">Entra con il codice mostrato sul maxischermo</p>
       </motion.div>
 

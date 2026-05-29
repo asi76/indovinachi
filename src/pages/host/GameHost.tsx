@@ -7,6 +7,7 @@ import { joinUrl } from '../../lib/game';
 import { playCountdownTick, resumeSoundboard } from '../../lib/soundboard';
 import { guessCountdownRemaining } from '../../lib/countdown';
 import type { PublicSessionView } from '../../types';
+import IceBreakerLogo from '../../components/IceBreakerLogo';
 
 function waitingMessage(session: PublicSessionView) {
   if (session.status === 'collecting' || session.status === 'ready') {
@@ -116,10 +117,8 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-6 p-6">
-        <h1 className="text-[3.53rem] font-black text-white leading-none">
-          Indovina<span className="text-yellow-400">Chi</span>
-        </h1>
+      <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-6 p-6">
+        <IceBreakerLogo className="text-[3.53rem]" />
         {!audioEnabled ? (
           <button type="button" onClick={enableHostAudio} className="fixed top-4 left-4 bg-yellow-400 text-gray-900 font-black px-4 py-2 rounded-xl shadow-lg z-50">
             Attiva audio
@@ -145,26 +144,43 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
     const answerKey = `${session.currentQuestionIndex}:${session.currentAnswerIndex}`;
 
     return (
-      <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-8 p-8 relative pt-16">
+      <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-8 p-8 relative pt-16">
         {!audioEnabled ? (
           <button type="button" onClick={enableHostAudio} className="fixed top-4 left-4 bg-yellow-400 text-gray-900 font-black px-4 py-2 rounded-xl shadow-lg z-50">
             Attiva audio
           </button>
         ) : null}
-        <h1 className="text-[3.53rem] font-black text-white leading-none flex items-center gap-0.5">
-          Indovina<span className="text-yellow-400">Chi</span>
-        </h1>
+        <IceBreakerLogo className="text-[3.53rem]" />
         <p className="text-purple-300 font-bold text-2xl">{session.title}</p>
 
         <motion.div
           key={`question-${session.currentQuestionIndex}-${session.currentQuestionText}`}
           initial={{ scale: 0.92, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1, rotateY: [90, 0] }}
+          animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.55, ease: 'easeOut' }}
-          className="card text-center max-w-5xl w-full"
-          style={{ transformStyle: 'preserve-3d' }}
+          className="max-w-5xl w-full"
+          style={{ perspective: 1400 }}
         >
-          <h2 className="text-5xl font-black text-gray-800 leading-tight">{session.currentQuestionText || 'Pronti?'}</h2>
+          <motion.div
+            animate={{ rotateY: showAnswerPlayer ? 180 : 0 }}
+            transition={{ duration: 0.7, ease: 'easeInOut' }}
+            className="relative min-h-[12rem]"
+            style={{ transformStyle: 'preserve-3d', transformOrigin: 'center center' }}
+          >
+            <div
+              className="absolute inset-0 card text-center flex items-center justify-center"
+              style={{ backfaceVisibility: 'hidden' }}
+            >
+              <h2 className="text-5xl font-black text-gray-800 leading-tight">{session.currentQuestionText || 'Pronti?'}</h2>
+            </div>
+            <div
+              className="absolute inset-0 bg-white text-gray-900 rounded-3xl px-10 py-6 text-center shadow-2xl flex flex-col items-center justify-center"
+              style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+            >
+              <p className="text-6xl mb-3">{answerPlayer?.avatar}</p>
+              <p className="font-black text-[3rem] leading-tight">{answerPlayer?.nickname || ''}</p>
+            </div>
+          </motion.div>
         </motion.div>
 
         {session.currentAnswerText ? (
@@ -172,29 +188,9 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
             initial={{ scale: 0.92, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className="max-w-4xl w-full"
-            style={{ perspective: 1400 }}
+            className="max-w-4xl w-full bg-yellow-400 text-gray-900 rounded-3xl px-10 py-6 text-center shadow-2xl flex flex-col items-center justify-center min-h-[14rem]"
           >
-            <motion.div
-              animate={{ rotateY: showAnswerPlayer ? 180 : 0 }}
-              transition={{ duration: 0.7, ease: 'easeInOut' }}
-              className="relative min-h-[14rem]"
-              style={{ transformStyle: 'preserve-3d', transformOrigin: 'center center' }}
-            >
-              <div
-                className="absolute inset-0 bg-yellow-400 text-gray-900 rounded-3xl px-10 py-6 text-center shadow-2xl flex flex-col items-center justify-center"
-                style={{ backfaceVisibility: 'hidden' }}
-              >
-                <p className="font-black text-[2.5rem] leading-tight">{session.currentAnswerText}</p>
-              </div>
-              <div
-                className="absolute inset-0 bg-white text-gray-900 rounded-3xl px-10 py-6 text-center shadow-2xl flex flex-col items-center justify-center"
-                style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
-              >
-                <p className="text-6xl mb-3">{answerPlayer?.avatar}</p>
-                <p className="font-black text-[3rem] leading-tight">{answerPlayer?.nickname || ''}</p>
-              </div>
-            </motion.div>
+            <p className="font-black text-[2.5rem] leading-tight">{session.currentAnswerText}</p>
           </motion.div>
         ) : null}
 
@@ -235,7 +231,7 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
 
   if (session.status === 'finished') {
     return (
-      <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-6 p-6 pt-16">
+      <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-6 p-6 pt-16">
         {!audioEnabled ? (
           <button type="button" onClick={enableHostAudio} className="fixed top-4 left-4 bg-yellow-400 text-gray-900 font-black px-4 py-2 rounded-xl shadow-lg z-50">
             Attiva audio
@@ -244,7 +240,7 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
         <div className="text-center">
           <div className="text-7xl mb-4">🎉</div>
           <h1 className="text-white font-black text-4xl">Sessione completata</h1>
-          <p className="text-purple-300 mt-3 text-xl font-semibold">Grazie per aver giocato a Indovina Chi.</p>
+          <p className="text-purple-300 mt-3 text-xl font-semibold">Grazie per aver giocato a IceBreaker.</p>
         </div>
         <button onClick={() => nav('/host')} className="btn-white text-xl px-10 py-4">Torna alla regia</button>
       </div>
@@ -252,15 +248,13 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-6 p-6">
+    <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-6 p-6">
       {!audioEnabled ? (
         <button type="button" onClick={enableHostAudio} className="fixed top-4 left-4 bg-yellow-400 text-gray-900 font-black px-4 py-2 rounded-xl shadow-lg z-50">
           Attiva audio
         </button>
       ) : null}
-      <h1 className="text-[3.53rem] font-black text-white leading-none flex items-center gap-0.5">
-        Indovina<span className="text-yellow-400">Chi</span>
-      </h1>
+      <IceBreakerLogo className="text-[3.53rem]" />
 
       <div className="text-center">
         <h2 className="text-white font-black text-[1.91rem]">{session.title}</h2>

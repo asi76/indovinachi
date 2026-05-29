@@ -18,7 +18,7 @@ function HostGuard({ children }: { children: ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-purple-900 flex items-center justify-center text-white font-black text-xl">
+      <div className="min-h-screen app-bg flex items-center justify-center text-white font-black text-xl">
         Controllo accesso host...
       </div>
     );

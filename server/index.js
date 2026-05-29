@@ -330,7 +330,7 @@ async function requireAuthorizedHost(req, res, next) {
 
     const role = await getProfileRole(email);
     if (!role) {
-      return res.status(403).json({ error: 'Utente non autorizzato per Indovina Chi' });
+      return res.status(403).json({ error: 'Utente non autorizzato per IceBreaker' });
     }
 
     req.user = {
@@ -551,7 +551,7 @@ async function buildSessionView(pocketBase, record) {
     code: record.code,
     hostEmail: record.hostEmail || '',
     hostName: record.hostName || '',
-    title: record.title || 'Indovina Chi',
+    title: record.title || 'IceBreaker',
     theme: record.theme || '',
     status: record.status || 'draft',
     questions: Array.isArray(record.questions) ? record.questions : [],
@@ -832,7 +832,7 @@ app.post('/api/sessions', requireAuthorizedHost, async (req, res) => {
       code,
       hostEmail: req.user.email,
       hostName: req.user.name,
-      title: 'Indovina Chi',
+      title: 'IceBreaker',
       theme: 'Studio party 70s, dinamico, luminoso, pieno di ritmo',
       status: 'draft',
       questions: [],
@@ -1051,7 +1051,7 @@ app.post('/api/sessions/:code/players/:playerId/guess', async (req, res) => {
 app.patch('/api/sessions/:code/config', requireAuthorizedHost, requireOwnedSession, async (req, res) => {
   try {
     const updated = await req.pocketBase.collection(SESSION_COLLECTION).update(req.sessionRecord.id, {
-      title: String(req.body?.title || 'Indovina Chi').trim().slice(0, 120),
+      title: String(req.body?.title || 'IceBreaker').trim().slice(0, 120),
       theme: String(req.body?.theme || '').trim().slice(0, 280),
       questions: normalizeQuestions(req.body?.questions),
       questionCount: normalizeQuestionCount(req.body?.questionCount),
@@ -1070,7 +1070,7 @@ app.post('/api/sessions/:code/start-collecting', requireAuthorizedHost, requireO
   try {
     if (req.body && Object.keys(req.body).length > 0) {
       req.sessionRecord = await req.pocketBase.collection(SESSION_COLLECTION).update(req.sessionRecord.id, {
-        title: String(req.body?.title || req.sessionRecord.title || 'Indovina Chi').trim().slice(0, 120),
+        title: String(req.body?.title || req.sessionRecord.title || 'IceBreaker').trim().slice(0, 120),
         theme: String(req.body?.theme ?? req.sessionRecord.theme ?? '').trim().slice(0, 280),
         questions: normalizeQuestions(req.body?.questions),
         questionCount: normalizeQuestionCount(req.body?.questionCount),
@@ -1154,7 +1154,7 @@ app.post('/api/sessions/:code/terminate', requireAuthorizedHost, requireOwnedSes
     }
 
     const updated = await req.pocketBase.collection(SESSION_COLLECTION).update(req.sessionRecord.id, {
-      title: 'Indovina Chi',
+      title: 'IceBreaker',
       theme: 'Studio party 70s, dinamico, luminoso, pieno di ritmo',
       status: 'draft',
       questions: [],

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { signOutFromGoogle } from '../../lib/firebase';
 import { addQuestion, deleteQuestion, fetchQuestionBank, importQuestions, updateQuestion } from '../../lib/sessionApi';
 import type { MultilingualQuestion } from '../../types';
+import IceBreakerLogo from '../../components/IceBreakerLogo';
 
 type QuestionDraft = Omit<MultilingualQuestion, 'id'>;
 
@@ -146,11 +147,11 @@ export default function QuestionsAdmin() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-purple-700 shadow-lg">
+    <div className="min-h-screen app-bg">
+      <header className="app-bg shadow-lg">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center gap-4">
-          <Link to="/host" className="text-[2.1rem] font-black text-white leading-none">
-            Indovina<span className="text-yellow-400">Chi</span>
+          <Link to="/host">
+            <IceBreakerLogo as="div" className="text-[2.1rem]" />
           </Link>
           <div className="flex items-center gap-3">
             <Link to="/host" className="btn-white py-2 px-4">Dashboard</Link>

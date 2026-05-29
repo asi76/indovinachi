@@ -4,6 +4,32 @@
 html, body, #root { height: 100%; margin: 0; }
 body { margin: 0 !important; }
 
+.app-bg {
+  background: #38bdf8;
+}
+
+.icebreaker-logo {
+  letter-spacing: 0;
+}
+
+.icebreaker-logo-ice,
+.icebreaker-logo-breaker {
+  -webkit-text-stroke: 2px #111827;
+  text-shadow:
+    2px 2px 0 #111827,
+    -1px -1px 0 #111827,
+    1px -1px 0 #111827,
+    -1px 1px 0 #111827;
+}
+
+.icebreaker-logo-ice {
+  color: #ffffff;
+}
+
+.icebreaker-logo-breaker {
+  color: #ef4444;
+}
+
 .card {
   background: white;
   border-radius: 1.5rem;
@@ -100,4 +126,4 @@ body { margin: 0 !important; }
 .h-screen { height: 100dvh; }
 .min-h-screen { min-height: 100dvh; }
 
-body { background-color: #581c87; }
+body { background-color: #38bdf8; }

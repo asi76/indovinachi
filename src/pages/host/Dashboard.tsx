@@ -6,6 +6,7 @@ import { signOutFromGoogle } from '../../lib/firebase';
 import { closeHostSession, createHostSession, fetchHostSessions, fetchQuestionBank, openCollecting, saveHostSessionConfig, startSession, terminateHostSession } from '../../lib/sessionApi';
 import { joinUrl, presenterUrl, remoteUrl, sessionStatusLabel } from '../../lib/game';
 import type { MultilingualQuestion, PublicSessionView, QuestionMode } from '../../types';
+import IceBreakerLogo from '../../components/IceBreakerLogo';
 
 function parseLines(value: string) {
   return value.split('\n').map((entry) => entry.trim()).filter(Boolean);
@@ -16,7 +17,7 @@ export default function HostDashboard() {
   const [sessions, setSessions] = useState<PublicSessionView[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [titleDraft, setTitleDraft] = useState('Indovina Chi');
+  const [titleDraft, setTitleDraft] = useState('IceBreaker');
   const [themeDraft, setThemeDraft] = useState('Party room viola, luci da quiz show, reveal teatrale');
   const [questionDraft, setQuestionDraft] = useState('');
   const [questionCountDraft, setQuestionCountDraft] = useState(3);
@@ -88,7 +89,7 @@ export default function HostDashboard() {
     setError('');
     try {
       const updated = await saveHostSessionConfig(session.code, {
-        title: titleDraft.trim() || 'Indovina Chi',
+        title: titleDraft.trim() || 'IceBreaker',
         theme: themeDraft.trim(),
         questions: parseLines(questionDraft),
         questionCount: questionCountDraft,
@@ -110,7 +111,7 @@ export default function HostDashboard() {
     setError('');
     try {
       const updated = await saveHostSessionConfig(session.code, {
-        title: titleDraft.trim() || 'Indovina Chi',
+        title: titleDraft.trim() || 'IceBreaker',
         theme: themeDraft.trim(),
         questions: parseLines(questionDraft),
         questionCount: questionCountDraft,
@@ -128,7 +129,7 @@ export default function HostDashboard() {
     setError('');
     try {
       const config = {
-        title: titleDraft.trim() || 'Indovina Chi',
+        title: titleDraft.trim() || 'IceBreaker',
         theme: themeDraft.trim(),
         questions: parseLines(questionDraft),
         questionCount: questionCountDraft,
@@ -183,7 +184,7 @@ export default function HostDashboard() {
       const updated = await terminateHostSession(session.code);
       setSessions([updated]);
       setQuestionDraft('');
-      setTitleDraft('Indovina Chi');
+      setTitleDraft('IceBreaker');
       setThemeDraft('Studio party 70s, dinamico, luminoso, pieno di ritmo');
     } catch (terminateError) {
       setError(terminateError instanceof Error ? terminateError.message : 'Terminazione fallita');
@@ -203,12 +204,10 @@ export default function HostDashboard() {
   const questionsPerPlayerPreview = questionModeDraft === 'direct' ? directQuestionCount : questionCountDraft;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-purple-700 shadow-lg">
+    <div className="min-h-screen app-bg">
+      <header className="app-bg shadow-lg">
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-          <h1 className="text-[2.1rem] font-black text-white leading-none">
-            Indovina<span className="text-yellow-400">Chi</span>
-          </h1>
+          <IceBreakerLogo className="text-[2.1rem]" />
           <button onClick={() => void signOutFromGoogle().then(() => window.location.reload())} className="text-purple-300 hover:text-white text-sm font-bold transition-colors">
             Logout
           </button>
@@ -219,7 +218,7 @@ export default function HostDashboard() {
         <div className="flex items-center justify-between mb-8 gap-4">
           <div>
             <h2 className="text-3xl font-black text-gray-800">Sessione attiva</h2>
-            <p className="text-gray-500 font-semibold mt-1">Stessa impostazione grafica di Quizzone, ma dedicata al reveal di Indovina Chi.</p>
+            <p className="text-gray-500 font-semibold mt-1">Stessa impostazione grafica di Quizzone, ma dedicata al reveal di IceBreaker.</p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3">
             {!session ? (

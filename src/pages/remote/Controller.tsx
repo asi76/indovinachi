@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { fetchRemoteSession, remoteAction } from '../../lib/sessionApi';
 import { guessCountdownRemaining } from '../../lib/countdown';
 import type { PublicSessionView } from '../../types';
+import IceBreakerLogo from '../../components/IceBreakerLogo';
 
 type RemoteAction = 'open-collect' | 'start-session' | 'question' | 'answer' | 'votes' | 'player' | 'finish';
 
@@ -58,7 +59,7 @@ export default function RemoteController({ sessionCode, token }: { sessionCode: 
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-purple-900 flex items-center justify-center p-6">
+      <div className="min-h-screen app-bg flex items-center justify-center p-6">
         <div className="card text-center max-w-md w-full">
           <h1 className="text-3xl font-black text-gray-800 mb-3">Telecomando</h1>
           <p className="text-gray-500 font-semibold">{error || 'Connessione in corso...'}</p>
@@ -77,10 +78,10 @@ export default function RemoteController({ sessionCode, token }: { sessionCode: 
   const canFinish = session.status === 'revealing' || session.status === 'finished';
 
   return (
-    <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-6 p-6">
+    <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-6 p-6">
       <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="card w-full max-w-md">
         <div className="text-center mb-6">
-          <h1 className="text-4xl font-black text-gray-800">Indovina Chi</h1>
+          <IceBreakerLogo className="text-4xl" />
           <p className="text-purple-500 font-black tracking-[0.3em] mt-2">{session.code}</p>
           <p className="text-gray-500 font-semibold mt-3">Inizia sessione prepara il reveal. Poi usa Prossima domanda, Mostra risposta e Mostra giocatore.</p>
         </div>

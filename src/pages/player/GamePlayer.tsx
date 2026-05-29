@@ -5,6 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { clearPlayerToken, loadPlayerToken } from '../../lib/game';
 import { fetchPlayer, fetchPublicSession, resolveQuestionText, submitPlayerGuess, submitPlayerResponses } from '../../lib/sessionApi';
 import type { IcebreakerPlayerRecord, PublicSessionView, QuestionLanguage } from '../../types';
+import IceBreakerLogo from '../../components/IceBreakerLogo';
 
 const languageOptions: Array<{ code: QuestionLanguage; flag: string; label: string }> = [
   { code: 'IT', flag: '🇮🇹', label: 'IT' },
@@ -190,10 +191,8 @@ export default function GamePlayer() {
 
   if (loading || !session || !player) {
     return (
-      <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-6 p-6">
-        <h1 className="text-[2.73rem] font-black text-white leading-none">
-          Indovina<span className="text-yellow-400">Chi</span>
-        </h1>
+      <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-6 p-6">
+        <IceBreakerLogo className="text-[2.73rem]" />
         <p className="text-light text-base">{error || 'Connessione alla sessione...'}</p>
       </div>
     );
@@ -202,10 +201,8 @@ export default function GamePlayer() {
   if (session.status === 'finished' || session.status === 'terminated') {
     clearPlayerToken();
     return (
-      <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-6 p-6">
-        <h1 className="text-[2.73rem] font-black text-white leading-none">
-          Indovina<span className="text-yellow-400">Chi</span>
-        </h1>
+      <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-6 p-6">
+        <IceBreakerLogo className="text-[2.73rem]" />
         <p className="text-light text-base">La sessione e stata chiusa.</p>
         <button onClick={() => nav('/play')} className="btn-white">Torna alla home</button>
       </div>
@@ -214,10 +211,8 @@ export default function GamePlayer() {
 
   if (session.status === 'draft' || session.status === 'lobby' || session.status === 'ready') {
     return (
-      <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-6 p-6">
-        <h1 className="text-[2.73rem] font-black text-white leading-none">
-          Indovina<span className="text-yellow-400">Chi</span>
-        </h1>
+      <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-6 p-6">
+        <IceBreakerLogo className="text-[2.73rem]" />
         <motion.div animate={{ scale: [1, 1.08, 1] }} transition={{ repeat: Infinity, duration: 1.8 }} className="text-[144px]">
           {player.avatar}
         </motion.div>
@@ -235,11 +230,9 @@ export default function GamePlayer() {
 
   if (session.status === 'collecting' && !player.submitted) {
     return (
-      <div className="min-h-screen bg-purple-900 flex flex-col gap-4 p-4">
+      <div className="min-h-screen app-bg flex flex-col gap-4 p-4">
         <div className="text-center pt-2">
-          <h1 className="text-[2.3rem] font-black text-white leading-none">
-            Indovina<span className="text-yellow-400">Chi</span>
-          </h1>
+          <IceBreakerLogo className="text-[2.3rem]" />
           <p className="text-purple-300 font-semibold mt-2">{player.avatar} {player.nickname}</p>
         </div>
 
@@ -289,10 +282,8 @@ export default function GamePlayer() {
 
   if (player.submitted && session.status === 'collecting') {
     return (
-      <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-6 p-6">
-        <h1 className="text-[2.73rem] font-black text-white leading-none">
-          Indovina<span className="text-yellow-400">Chi</span>
-        </h1>
+      <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-6 p-6">
+        <IceBreakerLogo className="text-[2.73rem]" />
         <motion.div animate={{ scale: [1, 1.08, 1] }} transition={{ repeat: Infinity, duration: 1.8 }} className="text-[144px]">
           {player.avatar}
         </motion.div>
@@ -311,10 +302,8 @@ export default function GamePlayer() {
     const confirmedGuess = session.players.find((entry) => entry.id === confirmedGuessId) || null;
 
     return (
-      <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-5 p-6">
-        <h1 className="text-[2.73rem] font-black text-white leading-none">
-          Indovina<span className="text-yellow-400">Chi</span>
-        </h1>
+      <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-5 p-6">
+        <IceBreakerLogo className="text-[2.73rem]" />
         {session.currentQuestionText ? (
           <div className="card w-full max-w-lg text-center">
             <h2 className="text-2xl font-black text-gray-800">{session.currentQuestionText}</h2>
@@ -328,7 +317,7 @@ export default function GamePlayer() {
         {votingOpen ? (
           <div className="w-full max-w-lg">
             <div className="flex items-center justify-between gap-3 mb-3">
-              <h2 className="text-white font-black text-2xl">Indovina Chi?</h2>
+              <h2 className="text-white font-black text-2xl">Chi e?</h2>
             </div>
             <div className="grid grid-cols-2 gap-2">
               {session.players.map((entry) => (
