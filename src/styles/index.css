@@ -117,10 +117,10 @@ body { margin: 0 !important; }
 
 .text-light {
   font-family: 'Nunito', sans-serif;
-  font-weight: 400;
-  color: #d1d5db;
-  -webkit-text-stroke: 0.3px rgba(0,0,0,0.25);
-  text-shadow: 0 0 2px rgba(255,255,255,0.5);
+  font-weight: 700;
+  color: #ffffff;
+  -webkit-text-stroke: 0.45px rgba(17, 24, 39, 0.68);
+  text-shadow: 0 1px 2px rgba(17, 24, 39, 0.55), 0 0 6px rgba(255, 255, 255, 0.35);
 }
 
 .h-screen { height: 100dvh; }

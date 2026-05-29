@@ -174,7 +174,6 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
           </button>
         ) : null}
         <IceBreakerLogo className="text-[3.53rem]" />
-        <p className="text-blue-300 font-bold text-2xl">{session.title}</p>
         <div className="flex items-center gap-2 rounded-full bg-blue-50 p-1">
           {languageOptions.map((option) => (
             <button
