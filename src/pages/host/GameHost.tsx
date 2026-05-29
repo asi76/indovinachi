@@ -161,8 +161,11 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
     const showVotingOpen = session.revealPhase === 'answer' && !showAnswerPlayer && !session.currentGuessSummaryVisible && countdownRemaining <= 0;
     const showGuessResults = Boolean(session.currentGuessSummaryVisible);
     const answerKey = `${session.currentQuestionIndex}:${session.currentAnswerIndex}`;
-    const currentRevealQuestion = session.revealQueue[session.currentQuestionIndex] || null;
+    const currentRevealQuestion = session.currentQuestionIndex >= 0
+      ? session.revealQueue[session.currentQuestionIndex] || null
+      : null;
     const currentQuestionText = resolveQuestionText(currentRevealQuestion || undefined, questionLanguage)
+      || currentRevealQuestion?.prompt
       || session.currentQuestionText
       || 'Pronti?';
 
@@ -190,7 +193,7 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
         </div>
 
         <motion.div
-          key={`question-${session.currentQuestionIndex}-${currentQuestionText}`}
+          key={`question-${session.currentQuestionIndex}-${questionLanguage}-${currentQuestionText}`}
           initial={{ scale: 0.92, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.55, ease: 'easeOut' }}
