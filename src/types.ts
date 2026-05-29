@@ -51,6 +51,8 @@ export interface IcebreakerSessionRecord {
   currentQuestionText: string;
   currentAnswerText: string;
   currentAnswerStartedAt: string;
+  serverNow: string;
+  clientReceivedAt?: number;
   revealPhase: RevealPhase;
   discoSpin: number;
   created: string;

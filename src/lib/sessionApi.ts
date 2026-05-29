@@ -1,6 +1,7 @@
 import { auth } from './firebase';
 import { pb } from './pocketbase';
 import type { IcebreakerPlayerRecord, MultilingualQuestion, PublicSessionView, QuestionLanguage, QuestionMode } from '../types';
+import { attachClientTiming } from './countdown';
 
 async function authorizedFetch(path: string, init?: RequestInit) {
   const token = await auth.currentUser?.getIdToken();
@@ -20,12 +21,12 @@ async function authorizedFetch(path: string, init?: RequestInit) {
 
 export async function fetchHostSessions(): Promise<PublicSessionView[]> {
   const payload = await authorizedFetch('/api/host/sessions');
-  return (payload.sessions || []) as PublicSessionView[];
+  return ((payload.sessions || []) as PublicSessionView[]).map(attachClientTiming);
 }
 
 export async function createHostSession(): Promise<PublicSessionView> {
   const payload = await authorizedFetch('/api/sessions', { method: 'POST', body: JSON.stringify({}) });
-  return payload.session as PublicSessionView;
+  return attachClientTiming(payload.session as PublicSessionView);
 }
 
 export async function saveHostSessionConfig(code: string, config: { title: string; theme: string; questions: string[]; questionCount: number; questionMode: QuestionMode }): Promise<PublicSessionView> {
@@ -33,7 +34,7 @@ export async function saveHostSessionConfig(code: string, config: { title: strin
     method: 'PATCH',
     body: JSON.stringify(config),
   });
-  return payload.session as PublicSessionView;
+  return attachClientTiming(payload.session as PublicSessionView);
 }
 
 export async function openCollecting(code: string, config?: { title: string; theme: string; questions: string[]; questionCount: number; questionMode: QuestionMode }): Promise<PublicSessionView> {
@@ -41,36 +42,36 @@ export async function openCollecting(code: string, config?: { title: string; the
     method: 'POST',
     body: JSON.stringify(config || {}),
   });
-  return payload.session as PublicSessionView;
+  return attachClientTiming(payload.session as PublicSessionView);
 }
 
 export async function startSession(code: string): Promise<PublicSessionView> {
   const payload = await authorizedFetch(`/api/sessions/${code}/start-reveal`, { method: 'POST' });
-  return payload.session as PublicSessionView;
+  return attachClientTiming(payload.session as PublicSessionView);
 }
 
 export async function closeHostSession(code: string): Promise<PublicSessionView> {
   const payload = await authorizedFetch(`/api/sessions/${code}/close`, { method: 'POST' });
-  return payload.session as PublicSessionView;
+  return attachClientTiming(payload.session as PublicSessionView);
 }
 
 export async function terminateHostSession(code: string): Promise<PublicSessionView> {
   const payload = await authorizedFetch(`/api/sessions/${code}/terminate`, { method: 'POST' });
-  return payload.session as PublicSessionView;
+  return attachClientTiming(payload.session as PublicSessionView);
 }
 
 export async function fetchPublicSession(code: string): Promise<PublicSessionView> {
   const response = await fetch(`/api/sessions/${code}/public`);
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || 'Sessione non disponibile');
-  return payload.session as PublicSessionView;
+  return attachClientTiming(payload.session as PublicSessionView);
 }
 
 export async function fetchRemoteSession(code: string, token: string): Promise<PublicSessionView> {
   const response = await fetch(`/api/sessions/${code}/remote?token=${encodeURIComponent(token)}`);
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || 'Telecomando non autorizzato');
-  return payload.session as PublicSessionView;
+  return attachClientTiming(payload.session as PublicSessionView);
 }
 
 export async function remoteAction(code: string, token: string, action: 'open-collect' | 'start-session' | 'question' | 'answer' | 'player' | 'finish') {
@@ -86,7 +87,7 @@ export async function remoteAction(code: string, token: string, action: 'open-co
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || 'Azione non completata');
-  return payload.session as PublicSessionView;
+  return attachClientTiming(payload.session as PublicSessionView);
 }
 
 export async function fetchPlayer(playerId: string) {

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { fetchRemoteSession, remoteAction } from '../../lib/sessionApi';
+import { guessCountdownRemaining } from '../../lib/countdown';
 import type { PublicSessionView } from '../../types';
 
 type RemoteAction = 'open-collect' | 'start-session' | 'question' | 'answer' | 'player' | 'finish';
-const GUESS_COUNTDOWN_SECONDS = 10;
 
 export default function RemoteController({ sessionCode, token }: { sessionCode: string; token: string }) {
   const [session, setSession] = useState<PublicSessionView | null>(null);
@@ -71,9 +71,7 @@ export default function RemoteController({ sessionCode, token }: { sessionCode: 
   const canStartSession = ['collecting', 'ready'].includes(session.status) && session.answeredCount > 0;
   const canQuestion = session.status === 'revealing' && ['idle', 'complete'].includes(session.revealPhase);
   const canAnswer = session.status === 'revealing' && session.revealPhase === 'question' && Boolean(session.currentQuestionText);
-  const answerStartedAt = Date.parse(session.currentAnswerStartedAt || session.updated || '') || 0;
-  const elapsedSeconds = answerStartedAt > 0 ? (now - answerStartedAt) / 1000 : 0;
-  const countdownRemaining = session.revealPhase === 'answer' ? Math.max(0, Math.ceil(GUESS_COUNTDOWN_SECONDS - elapsedSeconds)) : 0;
+  const countdownRemaining = guessCountdownRemaining(session, now);
   const canPlayer = session.status === 'revealing' && session.revealPhase === 'answer' && countdownRemaining <= 0 && Boolean(session.currentAnswerText);
   const canFinish = session.status === 'revealing' || session.status === 'finished';
 

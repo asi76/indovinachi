@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { clearPlayerToken, loadPlayerToken } from '../../lib/game';
+import { guessCountdownRemaining } from '../../lib/countdown';
 import { fetchPlayer, fetchPublicSession, resolveQuestionText, submitPlayerGuess, submitPlayerResponses } from '../../lib/sessionApi';
 import type { IcebreakerPlayerRecord, PublicSessionView, QuestionLanguage } from '../../types';
 
@@ -11,8 +12,6 @@ const languageOptions: Array<{ code: QuestionLanguage; flag: string; label: stri
   { code: 'SV', flag: '🇸🇪', label: 'SV' },
   { code: 'EN', flag: '🇬🇧', label: 'EN' },
 ];
-
-const GUESS_COUNTDOWN_SECONDS = 10;
 
 function initialQuestionLanguage(): QuestionLanguage {
   const saved = window.localStorage.getItem('indovinachi-question-language');
@@ -297,11 +296,7 @@ export default function GamePlayer() {
   }
 
   if (session.status === 'revealing') {
-    const answerStartedAt = Date.parse(session.currentAnswerStartedAt || session.updated || '') || 0;
-    const elapsedSeconds = answerStartedAt > 0 ? (now - answerStartedAt) / 1000 : 0;
-    const countdownRemaining = session.revealPhase === 'answer'
-      ? Math.max(0, Math.ceil(GUESS_COUNTDOWN_SECONDS - elapsedSeconds))
-      : 0;
+    const countdownRemaining = guessCountdownRemaining(session, now);
     const votingOpen = session.revealPhase === 'answer' && countdownRemaining > 0 && !session.currentAnswerPlayerVisible;
     const showGuessResults = ['answer', 'complete'].includes(session.revealPhase)
       && Boolean(session.currentAnswerText)
@@ -335,7 +330,6 @@ export default function GamePlayer() {
               <>
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <h2 className="text-white font-black text-2xl">Indovina Chi?</h2>
-                  <div className="bg-white/15 text-white font-black rounded-2xl px-4 py-2">{countdownRemaining}s</div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {session.players.map((entry) => (

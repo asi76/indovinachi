@@ -4,10 +4,9 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useNavigate } from 'react-router-dom';
 import { fetchPublicSession } from '../../lib/sessionApi';
 import { joinUrl } from '../../lib/game';
-import { playCountdownTick } from '../../lib/soundboard';
+import { playCountdownTick, resumeSoundboard } from '../../lib/soundboard';
+import { guessCountdownRemaining } from '../../lib/countdown';
 import type { PublicSessionView } from '../../types';
-
-const GUESS_COUNTDOWN_SECONDS = 10;
 
 function waitingMessage(session: PublicSessionView) {
   if (session.status === 'collecting' || session.status === 'ready') {
@@ -19,12 +18,6 @@ function waitingMessage(session: PublicSessionView) {
   }
   if (session.status === 'lobby' || session.status === 'draft') return 'Scansiona il QR, scegli il tuo avatar ed entra in sala.';
   return 'Preparazione sessione';
-}
-
-function guessCountdownRemaining(session: PublicSessionView, now: number) {
-  const answerStartedAt = Date.parse(session.currentAnswerStartedAt || session.updated || '') || 0;
-  const elapsedSeconds = answerStartedAt > 0 ? (now - answerStartedAt) / 1000 : 0;
-  return Math.max(0, Math.ceil(GUESS_COUNTDOWN_SECONDS - elapsedSeconds));
 }
 
 function GuessResultsModal({ session }: { session: PublicSessionView }) {
@@ -64,7 +57,13 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
   const [session, setSession] = useState<PublicSessionView | null>(null);
   const [error, setError] = useState('');
   const [now, setNow] = useState(() => Date.now());
+  const [audioEnabled, setAudioEnabled] = useState(false);
   const lastTickKeyRef = useRef('');
+
+  function enableHostAudio() {
+    resumeSoundboard();
+    setAudioEnabled(true);
+  }
 
   useEffect(() => {
     if (!sessionCode) return;
@@ -95,6 +94,16 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
   }, []);
 
   useEffect(() => {
+    const unlock = () => enableHostAudio();
+    window.addEventListener('pointerdown', unlock, { capture: true });
+    window.addEventListener('keydown', unlock, { capture: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock, { capture: true });
+      window.removeEventListener('keydown', unlock, { capture: true });
+    };
+  }, []);
+
+  useEffect(() => {
     if (!session || session.status !== 'revealing' || session.revealPhase !== 'answer') return;
 
     const countdownRemaining = guessCountdownRemaining(session, now);
@@ -111,6 +120,11 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
         <h1 className="text-[3.53rem] font-black text-white leading-none">
           Indovina<span className="text-yellow-400">Chi</span>
         </h1>
+        {!audioEnabled ? (
+          <button type="button" onClick={enableHostAudio} className="fixed top-4 left-4 bg-yellow-400 text-gray-900 font-black px-4 py-2 rounded-xl shadow-lg z-50">
+            Attiva audio
+          </button>
+        ) : null}
         <div className="card text-center">
           <h2 className="text-2xl font-black text-gray-800 mb-3">Schermo grande</h2>
           <p className="text-gray-500 font-semibold">{error || 'Caricamento sessione...'}</p>
@@ -133,6 +147,11 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
 
     return (
       <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-8 p-8 relative pt-16">
+        {!audioEnabled ? (
+          <button type="button" onClick={enableHostAudio} className="fixed top-4 left-4 bg-yellow-400 text-gray-900 font-black px-4 py-2 rounded-xl shadow-lg z-50">
+            Attiva audio
+          </button>
+        ) : null}
         <h1 className="text-[3.53rem] font-black text-white leading-none flex items-center gap-0.5">
           Indovina<span className="text-yellow-400">Chi</span>
         </h1>
@@ -212,6 +231,11 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
   if (session.status === 'finished') {
     return (
       <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-6 p-6 pt-16">
+        {!audioEnabled ? (
+          <button type="button" onClick={enableHostAudio} className="fixed top-4 left-4 bg-yellow-400 text-gray-900 font-black px-4 py-2 rounded-xl shadow-lg z-50">
+            Attiva audio
+          </button>
+        ) : null}
         <div className="text-center">
           <div className="text-7xl mb-4">🎉</div>
           <h1 className="text-white font-black text-4xl">Sessione completata</h1>
@@ -224,6 +248,11 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
 
   return (
     <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-6 p-6">
+      {!audioEnabled ? (
+        <button type="button" onClick={enableHostAudio} className="fixed top-4 left-4 bg-yellow-400 text-gray-900 font-black px-4 py-2 rounded-xl shadow-lg z-50">
+          Attiva audio
+        </button>
+      ) : null}
       <h1 className="text-[3.53rem] font-black text-white leading-none flex items-center gap-0.5">
         Indovina<span className="text-yellow-400">Chi</span>
       </h1>
