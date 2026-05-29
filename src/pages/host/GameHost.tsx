@@ -220,8 +220,7 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
 
         {showVotingOpen ? (
           <div className="bg-white/10 border border-white/20 rounded-3xl px-10 py-6 text-center">
-            <p className="text-purple-200 font-black tracking-widest text-sm mb-2">VOTAZIONE APERTA</p>
-            <p className="text-white font-black text-3xl">Attendi Mostra voti dal telecomando</p>
+            <p className="text-purple-200 font-black tracking-widest text-sm">VOTAZIONE APERTA</p>
           </div>
         ) : null}
 

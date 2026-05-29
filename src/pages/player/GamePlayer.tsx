@@ -54,18 +54,16 @@ function GuessResultsModal({ session }: { session: PublicSessionView }) {
   );
 }
 
-function ConfirmedGuessModal({ player, onClose }: { player: IcebreakerPlayerRecord; onClose: () => void }) {
+function ConfirmedGuessModal({ player }: { player: IcebreakerPlayerRecord }) {
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-5 z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-5 z-50">
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         className="bg-white rounded-3xl p-7 w-full max-w-sm text-center shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
       >
         <div className="text-7xl mb-4">{player.avatar}</div>
         <h3 className="text-gray-900 font-black text-3xl">{player.nickname}</h3>
-        <p className="text-gray-500 font-bold mt-4">Tocca fuori per cambiare voto</p>
       </motion.div>
     </div>
   );
@@ -374,7 +372,7 @@ export default function GamePlayer() {
         ) : null}
 
         {confirmedGuess && !showGuessResults && !selectedGuess ? (
-          <ConfirmedGuessModal player={confirmedGuess} onClose={() => setConfirmedGuessId('')} />
+          <ConfirmedGuessModal player={confirmedGuess} />
         ) : null}
         {showGuessResults ? <GuessResultsModal session={session} /> : null}
       </div>
