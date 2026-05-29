@@ -9,7 +9,7 @@ export function attachClientTiming(session: PublicSessionView): PublicSessionVie
 export function guessCountdownRemaining(session: PublicSessionView, localNow: number) {
   if (session.revealPhase !== 'answer') return 0;
 
-  const startedAt = Date.parse(session.currentAnswerStartedAt || session.updated || '');
+  const startedAt = Date.parse(session.currentAnswerStartedAt || '');
   const serverNowAtReceive = Date.parse(session.serverNow || '');
   if (!startedAt || !serverNowAtReceive) return 0;
 

@@ -7,6 +7,7 @@ export interface RevealAnswerEntry {
   nickname: string;
   avatar: string;
   text: string;
+  startedAt?: string;
 }
 
 export interface GuessSummaryEntry {

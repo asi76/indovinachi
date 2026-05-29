@@ -542,6 +542,7 @@ async function buildSessionView(pocketBase, record) {
   const answeredCount = players.filter((entry) => Boolean(entry.submitted)).length;
   const allAnswered = players.length > 0 && answeredCount === players.length;
   const currentAnswerPlayer = currentAnswerEntry(record);
+  const answerStartedAt = currentAnswerStartedAt(record);
   const currentGuessSummary = await getGuessSummary(pocketBase, record, players);
 
   return {
@@ -563,7 +564,7 @@ async function buildSessionView(pocketBase, record) {
     currentAnswerIndex: typeof record.currentAnswerIndex === 'number' ? record.currentAnswerIndex : -1,
     currentQuestionText: record.currentQuestionText || '',
     currentAnswerText: record.currentAnswerText || '',
-    currentAnswerStartedAt: record.currentAnswerStartedAt || (record.status === 'revealing' && record.currentAnswerText ? record.updated || '' : ''),
+    currentAnswerStartedAt: answerStartedAt,
     serverNow: new Date().toISOString(),
     revealPhase: record.revealPhase || 'idle',
     discoSpin: typeof record.discoSpin === 'number' ? record.discoSpin : 0,
@@ -693,6 +694,15 @@ function currentAnswerEntry(sessionRecord) {
   const revealItem = currentRevealItem(sessionRecord);
   const answerIndex = typeof sessionRecord.currentAnswerIndex === 'number' ? sessionRecord.currentAnswerIndex : -1;
   return revealItem?.answers?.[answerIndex] || null;
+}
+
+function currentAnswerStartedAt(sessionRecord) {
+  const answer = currentAnswerEntry(sessionRecord);
+  return answer?.startedAt || sessionRecord.currentAnswerStartedAt || (
+    sessionRecord.status === 'revealing' && sessionRecord.revealPhase === 'answer' && sessionRecord.currentAnswerText
+      ? sessionRecord.updated || ''
+      : ''
+  );
 }
 
 app.post('/api/auth/session', requireAuthorizedHost, async (req, res) => {
@@ -992,7 +1002,7 @@ app.post('/api/sessions/:code/players/:playerId/guess', async (req, res) => {
       return res.status(400).json({ error: 'Nessuna risposta attiva' });
     }
 
-    const elapsedMs = Date.now() - (Date.parse(session.currentAnswerStartedAt || session.updated || '') || 0);
+    const elapsedMs = Date.now() - (Date.parse(currentAnswerStartedAt(session)) || 0);
     if (elapsedMs > 10000) {
       return res.status(400).json({ error: 'Countdown terminato' });
     }
@@ -1251,7 +1261,15 @@ app.post('/api/sessions/:code/reveal/answer', requireRemoteSession, async (req, 
     if (nextIndex >= revealItem.answers.length) {
       return res.status(400).json({ error: 'Tutte le risposte per questa domanda sono gia state mostrate' });
     }
+    const startedAt = new Date().toISOString();
+    const revealQueue = Array.isArray(req.sessionRecord.revealQueue)
+      ? JSON.parse(JSON.stringify(req.sessionRecord.revealQueue))
+      : [];
+    if (revealQueue[req.sessionRecord.currentQuestionIndex]?.answers?.[nextIndex]) {
+      revealQueue[req.sessionRecord.currentQuestionIndex].answers[nextIndex].startedAt = startedAt;
+    }
     const updated = await req.pocketBase.collection(SESSION_COLLECTION).update(req.sessionRecord.id, {
+      revealQueue,
       currentAnswerIndex: nextIndex,
       currentAnswerText: revealItem.answers[nextIndex].text,
       revealPhase: 'answer',
