@@ -40,6 +40,7 @@
       { "name": "currentAnswerIndex", "type": "number", "required": false, "min": -1, "max": 5000, "noDecimal": true },
       { "name": "currentQuestionText", "type": "text", "required": false, "max": 500 },
       { "name": "currentAnswerText", "type": "text", "required": false, "max": 1000 },
+      { "name": "currentAnswerStartedAt", "type": "date", "required": false },
       { "name": "revealPhase", "type": "select", "required": false, "maxSelect": 1, "values": ["idle", "question", "answer", "complete"] },
       { "name": "discoSpin", "type": "number", "required": false, "min": 0, "max": 9999999, "noDecimal": true }
     ],

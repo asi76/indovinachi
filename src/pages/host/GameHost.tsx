@@ -22,9 +22,41 @@ function waitingMessage(session: PublicSessionView) {
 }
 
 function guessCountdownRemaining(session: PublicSessionView, now: number) {
-  const answerStartedAt = Date.parse(session.currentAnswerStartedAt || session.updated || '') || 0;
+  const answerStartedAt = Date.parse(session.currentAnswerStartedAt || '') || 0;
   const elapsedSeconds = answerStartedAt > 0 ? (now - answerStartedAt) / 1000 : 0;
   return Math.max(0, Math.ceil(GUESS_COUNTDOWN_SECONDS - elapsedSeconds));
+}
+
+function GuessResultsModal({ session }: { session: PublicSessionView }) {
+  return (
+    <div className="fixed inset-0 bg-black/65 flex items-center justify-center p-6 z-40">
+      <motion.div
+        initial={{ y: 18, opacity: 0, scale: 0.96 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+        className="bg-white rounded-3xl shadow-2xl p-6 max-w-4xl w-full max-h-[86dvh] overflow-y-auto"
+      >
+        <h3 className="text-gray-900 font-black text-3xl text-center mb-5">Secondo il pubblico</h3>
+        <div className="flex flex-col gap-3">
+          {session.currentGuessSummary.length === 0 ? (
+            <p className="text-gray-500 font-bold text-center py-4">Nessun voto ricevuto</p>
+          ) : session.currentGuessSummary.map((entry) => (
+            <div key={entry.playerId} className="grid grid-cols-[1fr_auto] items-center gap-4">
+              <div className="min-w-0">
+                <div className="flex items-center justify-between gap-3 mb-1">
+                  <span className="text-gray-900 font-black text-xl truncate">{entry.avatar} {entry.nickname}</span>
+                  <span className="text-purple-700 font-black text-xl">{entry.percentage}%</span>
+                </div>
+                <div className="h-4 bg-purple-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-yellow-400 rounded-full" style={{ width: `${Math.min(100, entry.percentage)}%` }} />
+                </div>
+              </div>
+              <span className="bg-purple-50 text-purple-700 font-black rounded-xl px-3 py-2">{entry.voteCount}</span>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  );
 }
 
 export default function GameHost({ sessionCode }: { sessionCode?: string }) {
@@ -94,7 +126,9 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
       ? guessCountdownRemaining(session, now)
       : 0;
     const showGuessCountdown = session.revealPhase === 'answer' && !showAnswerPlayer && countdownRemaining > 0;
-    const showGuessResults = session.revealPhase === 'answer' && !showAnswerPlayer && countdownRemaining <= 0;
+    const showGuessResults = ['answer', 'complete'].includes(session.revealPhase)
+      && Boolean(session.currentAnswerStartedAt)
+      && (session.revealPhase === 'complete' || countdownRemaining <= 0);
     const answerKey = `${session.currentQuestionIndex}:${session.currentAnswerIndex}`;
 
     return (
@@ -166,33 +200,7 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
           </motion.div>
         ) : null}
 
-        {showGuessResults ? (
-          <motion.div
-            initial={{ y: 18, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="bg-white rounded-3xl shadow-2xl p-6 max-w-4xl w-full"
-          >
-            <h3 className="text-gray-900 font-black text-3xl text-center mb-5">Secondo il pubblico</h3>
-            <div className="flex flex-col gap-3">
-              {session.currentGuessSummary.length === 0 ? (
-                <p className="text-gray-500 font-bold text-center py-4">Nessun voto ricevuto</p>
-              ) : session.currentGuessSummary.map((entry) => (
-                <div key={entry.playerId} className="grid grid-cols-[1fr_auto] items-center gap-4">
-                  <div className="min-w-0">
-                    <div className="flex items-center justify-between gap-3 mb-1">
-                      <span className="text-gray-900 font-black text-xl truncate">{entry.avatar} {entry.nickname}</span>
-                      <span className="text-purple-700 font-black text-xl">{entry.percentage}%</span>
-                    </div>
-                    <div className="h-4 bg-purple-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-yellow-400 rounded-full" style={{ width: `${Math.min(100, entry.percentage)}%` }} />
-                    </div>
-                  </div>
-                  <span className="bg-purple-50 text-purple-700 font-black rounded-xl px-3 py-2">{entry.voteCount}</span>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        ) : null}
+        {showGuessResults ? <GuessResultsModal session={session} /> : null}
 
         <div className="fixed bottom-4 right-4 bg-purple-800 text-white text-sm font-bold px-4 py-2 rounded-xl shadow-lg z-50">
           {session.title} - CODICE: {session.code}

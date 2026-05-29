@@ -425,6 +425,8 @@ async function getGuessSummary(pocketBase, sessionRecord, players) {
     if (!playersById.has(guess.guessedPlayerId)) continue;
     counts.set(guess.guessedPlayerId, (counts.get(guess.guessedPlayerId) || 0) + 1);
   }
+  const validVoteCount = Array.from(counts.values()).reduce((total, count) => total + count, 0);
+  if (validVoteCount === 0) return [];
 
   return Array.from(counts.entries())
     .map(([playerId, voteCount]) => {
@@ -434,7 +436,7 @@ async function getGuessSummary(pocketBase, sessionRecord, players) {
         nickname: player.nickname,
         avatar: player.avatar,
         voteCount,
-        percentage: Math.round((voteCount / players.length) * 1000) / 10,
+        percentage: Math.round((voteCount / validVoteCount) * 1000) / 10,
       };
     })
     .sort((left, right) => {
@@ -522,6 +524,7 @@ async function resetSessionForCollecting(pocketBase, sessionRecord, questions) {
     currentAnswerIndex: -1,
     currentQuestionText: '',
     currentAnswerText: '',
+    currentAnswerStartedAt: '',
     revealPhase: 'idle',
     assignedQuestionIds: playerAssignments.assignmentState || serializeAssignmentState(state.mode, []),
     discoSpin: nextDiscoSpin(sessionRecord.discoSpin),
@@ -560,6 +563,7 @@ async function buildSessionView(pocketBase, record) {
     currentAnswerIndex: typeof record.currentAnswerIndex === 'number' ? record.currentAnswerIndex : -1,
     currentQuestionText: record.currentQuestionText || '',
     currentAnswerText: record.currentAnswerText || '',
+    currentAnswerStartedAt: record.currentAnswerStartedAt || '',
     revealPhase: record.revealPhase || 'idle',
     discoSpin: typeof record.discoSpin === 'number' ? record.discoSpin : 0,
     created: record.created || '',
@@ -569,7 +573,6 @@ async function buildSessionView(pocketBase, record) {
     allAnswered,
     currentAnswerPlayer,
     currentAnswerPlayerVisible: record.status === 'revealing' && record.revealPhase === 'complete' && Boolean(currentAnswerPlayer),
-    currentAnswerStartedAt: record.status === 'revealing' && record.revealPhase === 'answer' ? record.updated || '' : '',
     currentGuessSummary,
     players: players.map((entry) => ({
       id: entry.id,
@@ -678,6 +681,7 @@ async function startRevealForSession(pocketBase, sessionRecord) {
     currentAnswerIndex: -1,
     currentQuestionText: '',
     currentAnswerText: '',
+    currentAnswerStartedAt: '',
     revealPhase: 'idle',
     discoSpin: nextDiscoSpin(sessionRecord.discoSpin),
   });
@@ -828,6 +832,7 @@ app.post('/api/sessions', requireAuthorizedHost, async (req, res) => {
       currentAnswerIndex: -1,
       currentQuestionText: '',
       currentAnswerText: '',
+      currentAnswerStartedAt: '',
       revealPhase: 'idle',
       discoSpin: 0,
     });
@@ -992,7 +997,7 @@ app.post('/api/sessions/:code/players/:playerId/guess', async (req, res) => {
       return res.status(400).json({ error: 'Nessuna risposta attiva' });
     }
 
-    const elapsedMs = Date.now() - (Date.parse(session.updated || '') || 0);
+    const elapsedMs = Date.now() - (Date.parse(session.currentAnswerStartedAt || '') || 0);
     if (elapsedMs > 10000) {
       return res.status(400).json({ error: 'Countdown terminato' });
     }
@@ -1143,6 +1148,7 @@ app.post('/api/sessions/:code/terminate', requireAuthorizedHost, requireOwnedSes
       currentAnswerIndex: -1,
       currentQuestionText: '',
       currentAnswerText: '',
+      currentAnswerStartedAt: '',
       revealPhase: 'idle',
       discoSpin: 0,
     });
@@ -1191,6 +1197,7 @@ app.post('/api/sessions/:code/close', requireAuthorizedHost, requireOwnedSession
       currentAnswerIndex: -1,
       currentQuestionText: '',
       currentAnswerText: '',
+      currentAnswerStartedAt: '',
       revealPhase: 'complete',
       assignedQuestionIds: serializeAssignmentState(assignmentState(req.sessionRecord).mode, []),
       discoSpin: nextDiscoSpin(req.sessionRecord.discoSpin),
@@ -1217,6 +1224,7 @@ app.post('/api/sessions/:code/reveal/question', requireRemoteSession, async (req
         status: 'finished',
         revealPhase: 'complete',
         currentAnswerText: '',
+        currentAnswerStartedAt: '',
       });
       const session = await buildSessionView(req.pocketBase, finished);
       return res.json({ session });
@@ -1226,6 +1234,7 @@ app.post('/api/sessions/:code/reveal/question', requireRemoteSession, async (req
       currentAnswerIndex: -1,
       currentQuestionText: queue[nextIndex].prompt,
       currentAnswerText: '',
+      currentAnswerStartedAt: '',
       revealPhase: 'question',
       discoSpin: nextDiscoSpin(record.discoSpin),
     });
@@ -1250,6 +1259,7 @@ app.post('/api/sessions/:code/reveal/answer', requireRemoteSession, async (req, 
     const updated = await req.pocketBase.collection(SESSION_COLLECTION).update(req.sessionRecord.id, {
       currentAnswerIndex: nextIndex,
       currentAnswerText: revealItem.answers[nextIndex].text,
+      currentAnswerStartedAt: new Date().toISOString(),
       revealPhase: 'answer',
       discoSpin: nextDiscoSpin(req.sessionRecord.discoSpin),
     });
@@ -1291,6 +1301,7 @@ app.post('/api/sessions/:code/reveal/finish', requireRemoteSession, async (req, 
       currentQuestionText: '',
       revealPhase: 'complete',
       currentAnswerText: '',
+      currentAnswerStartedAt: '',
       assignedQuestionIds: serializeAssignmentState(assignmentState(req.sessionRecord).mode, []),
       discoSpin: nextDiscoSpin(req.sessionRecord.discoSpin),
     });

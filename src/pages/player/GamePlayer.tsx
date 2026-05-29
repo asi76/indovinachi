@@ -24,6 +24,38 @@ function initialQuestionLanguage(): QuestionLanguage {
   return 'IT';
 }
 
+function GuessResultsModal({ session }: { session: PublicSessionView }) {
+  return (
+    <div className="fixed inset-0 bg-black/65 flex items-center justify-center p-5 z-40">
+      <motion.div
+        initial={{ y: 18, opacity: 0, scale: 0.96 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+        className="bg-white rounded-3xl shadow-2xl p-5 w-full max-w-lg max-h-[84dvh] overflow-y-auto"
+      >
+        <h3 className="text-gray-900 font-black text-2xl text-center mb-4">Secondo il pubblico</h3>
+        <div className="flex flex-col gap-3">
+          {session.currentGuessSummary.length === 0 ? (
+            <p className="text-gray-500 font-bold text-center py-4">Nessun voto ricevuto</p>
+          ) : session.currentGuessSummary.map((entry) => (
+            <div key={entry.playerId} className="grid grid-cols-[1fr_auto] items-center gap-3">
+              <div className="min-w-0">
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <span className="text-gray-900 font-black text-base truncate">{entry.avatar} {entry.nickname}</span>
+                  <span className="text-purple-700 font-black text-base">{entry.percentage}%</span>
+                </div>
+                <div className="h-3 bg-purple-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-yellow-400 rounded-full" style={{ width: `${Math.min(100, entry.percentage)}%` }} />
+                </div>
+              </div>
+              <span className="bg-purple-50 text-purple-700 font-black rounded-xl px-3 py-2">{entry.voteCount}</span>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function GamePlayer() {
   const { code, playerId } = useParams();
   const nav = useNavigate();
@@ -265,12 +297,15 @@ export default function GamePlayer() {
   }
 
   if (session.status === 'revealing') {
-    const answerStartedAt = Date.parse(session.currentAnswerStartedAt || session.updated || '') || 0;
+    const answerStartedAt = Date.parse(session.currentAnswerStartedAt || '') || 0;
     const elapsedSeconds = answerStartedAt > 0 ? (now - answerStartedAt) / 1000 : 0;
     const countdownRemaining = session.revealPhase === 'answer'
       ? Math.max(0, Math.ceil(GUESS_COUNTDOWN_SECONDS - elapsedSeconds))
       : 0;
     const votingOpen = session.revealPhase === 'answer' && countdownRemaining > 0 && !session.currentAnswerPlayerVisible;
+    const showGuessResults = ['answer', 'complete'].includes(session.revealPhase)
+      && Boolean(session.currentAnswerStartedAt)
+      && (session.revealPhase === 'complete' || countdownRemaining <= 0);
     const selectedGuess = session.players.find((entry) => entry.id === selectedGuessId) || null;
     const confirmedGuess = session.players.find((entry) => entry.id === confirmedGuessId) || null;
 
@@ -316,7 +351,7 @@ export default function GamePlayer() {
               <p className="text-purple-200 text-center font-bold mt-3">Scelta confermata: {confirmedGuess.avatar} {confirmedGuess.nickname}</p>
             ) : null}
           </div>
-        ) : (
+        ) : showGuessResults ? null : (
           <div className="w-full max-w-lg bg-white/10 rounded-2xl px-5 py-4 text-center">
             <p className="text-white font-black">{session.revealPhase === 'answer' ? 'Votazione chiusa' : 'Aspetta il prossimo voto'}</p>
           </div>
@@ -341,6 +376,8 @@ export default function GamePlayer() {
             </motion.div>
           </div>
         ) : null}
+
+        {showGuessResults ? <GuessResultsModal session={session} /> : null}
       </div>
     );
   }

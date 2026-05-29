@@ -50,6 +50,7 @@ export interface IcebreakerSessionRecord {
   currentAnswerIndex: number;
   currentQuestionText: string;
   currentAnswerText: string;
+  currentAnswerStartedAt: string;
   revealPhase: RevealPhase;
   discoSpin: number;
   created: string;
@@ -63,7 +64,6 @@ export interface PublicSessionView extends IcebreakerSessionRecord {
   players: IcebreakerPlayerRecord[];
   currentAnswerPlayer: RevealAnswerEntry | null;
   currentAnswerPlayerVisible: boolean;
-  currentAnswerStartedAt: string;
   currentGuessSummary: GuessSummaryEntry[];
 }
 
