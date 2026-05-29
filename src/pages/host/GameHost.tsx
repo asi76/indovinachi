@@ -6,8 +6,21 @@ import { fetchPublicSession } from '../../lib/sessionApi';
 import { joinUrl } from '../../lib/game';
 import { playCountdownTick, resumeSoundboard } from '../../lib/soundboard';
 import { guessCountdownRemaining } from '../../lib/countdown';
-import type { PublicSessionView } from '../../types';
+import { resolveQuestionText } from '../../lib/sessionApi';
+import type { PublicSessionView, QuestionLanguage } from '../../types';
 import IceBreakerLogo from '../../components/IceBreakerLogo';
+
+const languageOptions: Array<{ code: QuestionLanguage; flag: string; label: string }> = [
+  { code: 'IT', flag: '🇮🇹', label: 'IT' },
+  { code: 'SV', flag: '🇸🇪', label: 'SV' },
+  { code: 'EN', flag: '🇬🇧', label: 'EN' },
+];
+
+function initialQuestionLanguage(): QuestionLanguage {
+  const saved = window.localStorage.getItem('icebreaker-host-question-language');
+  if (saved === 'IT' || saved === 'SV' || saved === 'EN') return saved;
+  return 'IT';
+}
 
 function waitingMessage(session: PublicSessionView) {
   if (session.status === 'collecting' || session.status === 'ready') {
@@ -59,11 +72,17 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
   const [error, setError] = useState('');
   const [now, setNow] = useState(() => Date.now());
   const [audioEnabled, setAudioEnabled] = useState(false);
+  const [questionLanguage, setQuestionLanguage] = useState<QuestionLanguage>(initialQuestionLanguage);
   const lastTickKeyRef = useRef('');
 
   function enableHostAudio() {
     resumeSoundboard();
     setAudioEnabled(true);
+  }
+
+  function handleLanguageChange(nextLanguage: QuestionLanguage) {
+    setQuestionLanguage(nextLanguage);
+    window.localStorage.setItem('icebreaker-host-question-language', nextLanguage);
   }
 
   useEffect(() => {
@@ -142,6 +161,10 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
     const showVotingOpen = session.revealPhase === 'answer' && !showAnswerPlayer && !session.currentGuessSummaryVisible && countdownRemaining <= 0;
     const showGuessResults = Boolean(session.currentGuessSummaryVisible);
     const answerKey = `${session.currentQuestionIndex}:${session.currentAnswerIndex}`;
+    const currentRevealQuestion = session.revealQueue[session.currentQuestionIndex] || null;
+    const currentQuestionText = resolveQuestionText(currentRevealQuestion || undefined, questionLanguage)
+      || session.currentQuestionText
+      || 'Pronti?';
 
     return (
       <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-8 p-8 relative pt-16">
@@ -152,9 +175,23 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
         ) : null}
         <IceBreakerLogo className="text-[3.53rem]" />
         <p className="text-blue-300 font-bold text-2xl">{session.title}</p>
+        <div className="flex items-center gap-2 rounded-full bg-blue-50 p-1">
+          {languageOptions.map((option) => (
+            <button
+              key={option.code}
+              type="button"
+              onClick={() => handleLanguageChange(option.code)}
+              className={`h-10 min-w-[74px] rounded-full px-3 text-sm font-black transition-colors ${questionLanguage === option.code ? 'bg-blue-700 text-white shadow' : 'bg-white text-blue-700'}`}
+              aria-pressed={questionLanguage === option.code}
+            >
+              <span className="mr-1" aria-hidden="true">{option.flag}</span>
+              {option.label}
+            </button>
+          ))}
+        </div>
 
         <motion.div
-          key={`question-${session.currentQuestionIndex}-${session.currentQuestionText}`}
+          key={`question-${session.currentQuestionIndex}-${currentQuestionText}`}
           initial={{ scale: 0.92, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.55, ease: 'easeOut' }}
@@ -171,7 +208,7 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
               className="absolute inset-0 card text-center flex items-center justify-center"
               style={{ backfaceVisibility: 'hidden' }}
             >
-              <h2 className="text-5xl font-black text-gray-800 leading-tight">{session.currentQuestionText || 'Pronti?'}</h2>
+              <h2 className="text-5xl font-black text-gray-800 leading-tight">{currentQuestionText}</h2>
             </div>
             <div
               className="absolute inset-0 bg-white text-gray-900 rounded-3xl px-10 py-6 text-center shadow-2xl flex flex-col items-center justify-center"

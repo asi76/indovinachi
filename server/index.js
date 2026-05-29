@@ -693,11 +693,25 @@ async function startRevealForSession(pocketBase, sessionRecord) {
     throw new Error('Nessuna risposta disponibile per il reveal');
   }
   const grouped = new Map();
+  const questionsById = new Map();
+  async function getQuestionForResponse(response) {
+    const id = String(response.questionId || '');
+    if (!id || id.startsWith('legacy-')) return null;
+    if (questionsById.has(id)) return questionsById.get(id);
+    const question = await pocketBase.collection(QUESTION_COLLECTION).getOne(id).catch(() => null);
+    questionsById.set(id, question);
+    return question;
+  }
+
   for (const response of responses) {
     const key = response.questionId || response.questionText || (Number.isFinite(response.questionIndex) ? response.questionIndex : 0);
+    const question = await getQuestionForResponse(response);
     if (!grouped.has(key)) {
       grouped.set(key, {
-        prompt: response.questionText,
+        prompt: question?.IT || response.questionText,
+        IT: question?.IT || response.questionText,
+        EN: question?.EN || response.questionText,
+        SV: question?.SV || response.questionText,
         answers: [],
       });
     }
@@ -712,6 +726,9 @@ async function startRevealForSession(pocketBase, sessionRecord) {
   const queue = shuffle(Array.from(grouped.values()))
     .map((entry) => ({
       prompt: entry.prompt,
+      IT: entry.IT,
+      EN: entry.EN,
+      SV: entry.SV,
       answers: shuffle(entry.answers),
     }))
     .filter((entry) => entry.prompt && entry.answers.length > 0);

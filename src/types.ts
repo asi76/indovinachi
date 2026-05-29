@@ -21,6 +21,9 @@ export interface GuessSummaryEntry {
 
 export interface RevealQuestionEntry {
   prompt: string;
+  IT?: string;
+  EN?: string;
+  SV?: string;
   answers: RevealAnswerEntry[];
 }
 
