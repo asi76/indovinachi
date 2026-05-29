@@ -33,3 +33,23 @@ export function playUiClick() {
   osc.start(now);
   osc.stop(now + 0.1);
 }
+
+export function playCountdownTick(isFinal = false) {
+  const ctx = getCtx();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') void ctx.resume();
+
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = isFinal ? 'square' : 'sine';
+  osc.frequency.setValueAtTime(isFinal ? 330 : 880, now);
+  osc.frequency.exponentialRampToValueAtTime(isFinal ? 180 : 640, now + 0.14);
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(isFinal ? 0.18 : 0.11, now + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + (isFinal ? 0.32 : 0.16));
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + (isFinal ? 0.34 : 0.18));
+}

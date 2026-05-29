@@ -4,11 +4,13 @@ import { fetchRemoteSession, remoteAction } from '../../lib/sessionApi';
 import type { PublicSessionView } from '../../types';
 
 type RemoteAction = 'open-collect' | 'start-session' | 'question' | 'answer' | 'player' | 'finish';
+const GUESS_COUNTDOWN_SECONDS = 10;
 
 export default function RemoteController({ sessionCode, token }: { sessionCode: string; token: string }) {
   const [session, setSession] = useState<PublicSessionView | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     let active = true;
@@ -35,6 +37,11 @@ export default function RemoteController({ sessionCode, token }: { sessionCode: 
       window.clearInterval(id);
     };
   }, [sessionCode, token]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(id);
+  }, []);
 
   async function handleAction(action: RemoteAction) {
     setBusy(action);
@@ -64,7 +71,10 @@ export default function RemoteController({ sessionCode, token }: { sessionCode: 
   const canStartSession = ['collecting', 'ready'].includes(session.status) && session.answeredCount > 0;
   const canQuestion = session.status === 'revealing' && ['idle', 'complete'].includes(session.revealPhase);
   const canAnswer = session.status === 'revealing' && session.revealPhase === 'question' && Boolean(session.currentQuestionText);
-  const canPlayer = session.status === 'revealing' && session.revealPhase === 'answer' && Boolean(session.currentAnswerText);
+  const answerStartedAt = Date.parse(session.currentAnswerStartedAt || session.updated || '') || 0;
+  const elapsedSeconds = answerStartedAt > 0 ? (now - answerStartedAt) / 1000 : 0;
+  const countdownRemaining = session.revealPhase === 'answer' ? Math.max(0, Math.ceil(GUESS_COUNTDOWN_SECONDS - elapsedSeconds)) : 0;
+  const canPlayer = session.status === 'revealing' && session.revealPhase === 'answer' && countdownRemaining <= 0 && Boolean(session.currentAnswerText);
   const canFinish = session.status === 'revealing' || session.status === 'finished';
 
   return (
@@ -101,7 +111,7 @@ export default function RemoteController({ sessionCode, token }: { sessionCode: 
             {busy === 'answer' ? 'Mostro...' : 'Mostra risposta'}
           </button>
           <button onClick={() => void handleAction('player')} disabled={!canPlayer || busy !== null} className="btn-white text-lg disabled:opacity-40">
-            {busy === 'player' ? 'Rivelo...' : 'Mostra giocatore'}
+            {busy === 'player' ? 'Rivelo...' : countdownRemaining > 0 ? `Mostra giocatore tra ${countdownRemaining}s` : 'Mostra giocatore'}
           </button>
           <button onClick={() => void handleAction('finish')} disabled={!canFinish || busy !== null} className="py-4 border-2 border-gray-200 text-gray-600 font-black rounded-2xl hover:bg-gray-50 active:scale-95 transition-all disabled:opacity-40">
             {busy === 'finish' ? 'Chiudo...' : 'Chiudi gioco'}

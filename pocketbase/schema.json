@@ -89,6 +89,26 @@
     ]
   },
   {
+    "name": "icebreaker_guesses",
+    "type": "base",
+    "listRule": "",
+    "viewRule": "",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "fields": [
+      { "name": "sessionCode", "type": "text", "required": true, "min": 6, "max": 6 },
+      { "name": "answerKey", "type": "text", "required": true, "max": 32 },
+      { "name": "voterPlayerId", "type": "text", "required": true, "max": 32 },
+      { "name": "guessedPlayerId", "type": "text", "required": true, "max": 32 },
+      { "name": "submittedAt", "type": "date", "required": true }
+    ],
+    "indexes": [
+      "CREATE INDEX idx_icebreaker_guesses_session_code ON icebreaker_guesses (sessionCode)",
+      "CREATE UNIQUE INDEX idx_icebreaker_guesses_answer_voter ON icebreaker_guesses (sessionCode, answerKey, voterPlayerId)"
+    ]
+  },
+  {
     "name": "icebreaker_questions",
     "type": "base",
     "listRule": null,

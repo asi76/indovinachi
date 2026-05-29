@@ -9,6 +9,14 @@ export interface RevealAnswerEntry {
   text: string;
 }
 
+export interface GuessSummaryEntry {
+  playerId: string;
+  nickname: string;
+  avatar: string;
+  voteCount: number;
+  percentage: number;
+}
+
 export interface RevealQuestionEntry {
   prompt: string;
   answers: RevealAnswerEntry[];
@@ -55,6 +63,8 @@ export interface PublicSessionView extends IcebreakerSessionRecord {
   players: IcebreakerPlayerRecord[];
   currentAnswerPlayer: RevealAnswerEntry | null;
   currentAnswerPlayerVisible: boolean;
+  currentAnswerStartedAt: string;
+  currentGuessSummary: GuessSummaryEntry[];
 }
 
 export interface IcebreakerPlayerRecord {

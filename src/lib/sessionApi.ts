@@ -122,6 +122,17 @@ export async function submitPlayerResponses(session: PublicSessionView, player: 
   return payload.player as IcebreakerPlayerRecord;
 }
 
+export async function submitPlayerGuess(session: PublicSessionView, player: IcebreakerPlayerRecord, guessedPlayerId: string) {
+  const response = await fetch(`/api/sessions/${session.code}/players/${player.id}/guess`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ guessedPlayerId }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || 'Voto non registrato');
+  return payload.guess as { guessedPlayerId: string };
+}
+
 export async function fetchQuestionBank(): Promise<MultilingualQuestion[]> {
   const payload = await authorizedFetch('/api/questions');
   return (payload.questions || []) as MultilingualQuestion[];

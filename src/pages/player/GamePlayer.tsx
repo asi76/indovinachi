@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { clearPlayerToken, loadPlayerToken } from '../../lib/game';
-import { fetchPlayer, fetchPublicSession, resolveQuestionText, submitPlayerResponses } from '../../lib/sessionApi';
+import { fetchPlayer, fetchPublicSession, resolveQuestionText, submitPlayerGuess, submitPlayerResponses } from '../../lib/sessionApi';
 import type { IcebreakerPlayerRecord, PublicSessionView, QuestionLanguage } from '../../types';
 
 const languageOptions: Array<{ code: QuestionLanguage; flag: string; label: string }> = [
@@ -11,6 +11,8 @@ const languageOptions: Array<{ code: QuestionLanguage; flag: string; label: stri
   { code: 'SV', flag: '🇸🇪', label: 'SV' },
   { code: 'EN', flag: '🇬🇧', label: 'EN' },
 ];
+
+const GUESS_COUNTDOWN_SECONDS = 10;
 
 function initialQuestionLanguage(): QuestionLanguage {
   const saved = window.localStorage.getItem('indovinachi-question-language');
@@ -30,8 +32,12 @@ export default function GamePlayer() {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [submittingGuess, setSubmittingGuess] = useState(false);
   const [error, setError] = useState('');
   const [questionLanguage, setQuestionLanguage] = useState<QuestionLanguage>(initialQuestionLanguage);
+  const [now, setNow] = useState(() => Date.now());
+  const [selectedGuessId, setSelectedGuessId] = useState('');
+  const [confirmedGuessId, setConfirmedGuessId] = useState('');
 
   function handleLanguageChange(nextLanguage: QuestionLanguage) {
     setQuestionLanguage(nextLanguage);
@@ -81,6 +87,16 @@ export default function GamePlayer() {
     };
   }, [code, playerId, nav]);
 
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    setSelectedGuessId('');
+    setConfirmedGuessId('');
+  }, [session?.currentQuestionIndex, session?.currentAnswerIndex]);
+
   const normalizedAnswers = useMemo(() => {
     if (!session || !player) return [];
     const playerQuestions = Array.isArray(player.questions) && player.questions.length > 0
@@ -114,6 +130,21 @@ export default function GamePlayer() {
       setError(submitError instanceof Error ? submitError.message : 'Invio fallito');
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleConfirmGuess() {
+    if (!session || !player || !selectedGuessId) return;
+    setSubmittingGuess(true);
+    setError('');
+    try {
+      const guess = await submitPlayerGuess(session, player, selectedGuessId);
+      setConfirmedGuessId(guess.guessedPlayerId);
+      setSelectedGuessId('');
+    } catch (guessError) {
+      setError(guessError instanceof Error ? guessError.message : 'Voto non registrato');
+    } finally {
+      setSubmittingGuess(false);
     }
   }
 
@@ -234,6 +265,15 @@ export default function GamePlayer() {
   }
 
   if (session.status === 'revealing') {
+    const answerStartedAt = Date.parse(session.currentAnswerStartedAt || session.updated || '') || 0;
+    const elapsedSeconds = answerStartedAt > 0 ? (now - answerStartedAt) / 1000 : 0;
+    const countdownRemaining = session.revealPhase === 'answer'
+      ? Math.max(0, Math.ceil(GUESS_COUNTDOWN_SECONDS - elapsedSeconds))
+      : 0;
+    const votingOpen = session.revealPhase === 'answer' && countdownRemaining > 0 && !session.currentAnswerPlayerVisible;
+    const selectedGuess = session.players.find((entry) => entry.id === selectedGuessId) || null;
+    const confirmedGuess = session.players.find((entry) => entry.id === confirmedGuessId) || null;
+
     return (
       <div className="min-h-screen bg-purple-900 flex flex-col items-center justify-center gap-5 p-6">
         <h1 className="text-[2.73rem] font-black text-white leading-none">
@@ -249,17 +289,58 @@ export default function GamePlayer() {
             <p className="font-black text-2xl leading-tight">{session.currentAnswerText}</p>
           </div>
         ) : null}
-        <div className="w-full max-w-lg">
-          <h2 className="text-white text-center font-black text-2xl mb-3">Indovina Chi?</h2>
-          <div className="grid grid-cols-2 gap-2">
-            {session.players.map((entry) => (
-              <div key={entry.id} className="bg-white/15 text-white rounded-2xl px-3 py-3 text-center">
-                <div className="text-3xl mb-1">{entry.avatar}</div>
-                <div className="font-black text-sm leading-tight">{entry.nickname}</div>
-              </div>
-            ))}
+        {votingOpen ? (
+          <div className="w-full max-w-lg">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h2 className="text-white font-black text-2xl">Indovina Chi?</h2>
+              <div className="bg-white/15 text-white font-black rounded-2xl px-4 py-2">{countdownRemaining}s</div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {session.players.map((entry) => {
+                const isConfirmed = confirmedGuessId === entry.id;
+                return (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    onClick={() => setSelectedGuessId(entry.id)}
+                    disabled={submittingGuess}
+                    className={`min-h-[102px] rounded-2xl px-3 py-3 text-center transition-colors ${isConfirmed ? 'bg-yellow-400 text-gray-900' : 'bg-white/15 text-white active:bg-white/25'}`}
+                  >
+                    <div className="text-3xl mb-1">{entry.avatar}</div>
+                    <div className="font-black text-sm leading-tight">{entry.nickname}</div>
+                  </button>
+                );
+              })}
+            </div>
+            {confirmedGuess ? (
+              <p className="text-purple-200 text-center font-bold mt-3">Scelta confermata: {confirmedGuess.avatar} {confirmedGuess.nickname}</p>
+            ) : null}
           </div>
-        </div>
+        ) : (
+          <div className="w-full max-w-lg bg-white/10 rounded-2xl px-5 py-4 text-center">
+            <p className="text-white font-black">{session.revealPhase === 'answer' ? 'Votazione chiusa' : 'Aspetta il prossimo voto'}</p>
+          </div>
+        )}
+
+        {error ? <div className="bg-red-500 text-white font-bold text-center py-3 px-4 rounded-xl text-sm max-w-lg w-full">{error}</div> : null}
+
+        {selectedGuess ? (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-5 z-50">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl">
+              <div className="text-6xl mb-3">{selectedGuess.avatar}</div>
+              <h3 className="text-gray-900 font-black text-2xl mb-2">{selectedGuess.nickname}</h3>
+              <p className="text-gray-500 font-semibold mb-5">Confermi questa scelta?</p>
+              <div className="grid grid-cols-2 gap-3">
+                <button type="button" onClick={() => setSelectedGuessId('')} disabled={submittingGuess} className="rounded-2xl bg-gray-100 text-gray-700 font-black py-4">
+                  Annulla
+                </button>
+                <button type="button" onClick={() => void handleConfirmGuess()} disabled={submittingGuess} className="btn-purple py-4">
+                  {submittingGuess ? 'Invio...' : 'Conferma'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        ) : null}
       </div>
     );
   }

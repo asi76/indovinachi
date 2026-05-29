@@ -25,6 +25,7 @@ const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'asi.vong@gmail.com').toLowerCas
 const SESSION_COLLECTION = 'icebreaker_sessions';
 const PLAYER_COLLECTION = 'icebreaker_players';
 const RESPONSE_COLLECTION = 'icebreaker_responses';
+const GUESS_COLLECTION = 'icebreaker_guesses';
 const QUESTION_COLLECTION = 'icebreaker_questions';
 const DEFAULT_QUESTIONS_JSON = process.env.DEFAULT_QUESTIONS_JSON || '/home/asi/Hämtningar/domande.json';
 let defaultQuestionsSeeded = false;
@@ -397,6 +398,51 @@ async function getResponsesByCode(pocketBase, code) {
   });
 }
 
+function currentAnswerKey(sessionRecord) {
+  const questionIndex = typeof sessionRecord.currentQuestionIndex === 'number' ? sessionRecord.currentQuestionIndex : -1;
+  const answerIndex = typeof sessionRecord.currentAnswerIndex === 'number' ? sessionRecord.currentAnswerIndex : -1;
+  if (questionIndex < 0 || answerIndex < 0) return '';
+  return `${questionIndex}:${answerIndex}`;
+}
+
+async function getGuessSummary(pocketBase, sessionRecord, players) {
+  const answerKey = currentAnswerKey(sessionRecord);
+  if (!answerKey || players.length === 0) return [];
+
+  let guesses = [];
+  try {
+    guesses = await pocketBase.collection(GUESS_COLLECTION).getFullList({
+      filter: `sessionCode="${escapeFilter(sessionRecord.code)}" && answerKey="${escapeFilter(answerKey)}"`,
+    });
+  } catch (error) {
+    console.error('[getGuessSummary]', error);
+    return [];
+  }
+
+  const playersById = new Map(players.map((player) => [player.id, player]));
+  const counts = new Map();
+  for (const guess of guesses) {
+    if (!playersById.has(guess.guessedPlayerId)) continue;
+    counts.set(guess.guessedPlayerId, (counts.get(guess.guessedPlayerId) || 0) + 1);
+  }
+
+  return Array.from(counts.entries())
+    .map(([playerId, voteCount]) => {
+      const player = playersById.get(playerId);
+      return {
+        playerId,
+        nickname: player.nickname,
+        avatar: player.avatar,
+        voteCount,
+        percentage: Math.round((voteCount / players.length) * 1000) / 10,
+      };
+    })
+    .sort((left, right) => {
+      if (right.voteCount !== left.voteCount) return right.voteCount - left.voteCount;
+      return left.nickname.localeCompare(right.nickname, 'it');
+    });
+}
+
 async function deleteRecordsBySessionCode(pocketBase, collectionName, code) {
   while (true) {
     const records = await pocketBase.collection(collectionName).getFullList({
@@ -410,6 +456,9 @@ async function deleteRecordsBySessionCode(pocketBase, collectionName, code) {
 }
 
 async function clearSessionParticipants(pocketBase, code) {
+  await deleteRecordsBySessionCode(pocketBase, GUESS_COLLECTION, code).catch((error) => {
+    console.error('[clearSessionParticipants:guesses]', error);
+  });
   await deleteRecordsBySessionCode(pocketBase, RESPONSE_COLLECTION, code);
   await deleteRecordsBySessionCode(pocketBase, PLAYER_COLLECTION, code);
 }
@@ -490,6 +539,7 @@ async function buildSessionView(pocketBase, record) {
   const answeredCount = players.filter((entry) => Boolean(entry.submitted)).length;
   const allAnswered = players.length > 0 && answeredCount === players.length;
   const currentAnswerPlayer = currentAnswerEntry(record);
+  const currentGuessSummary = await getGuessSummary(pocketBase, record, players);
 
   return {
     id: record.id,
@@ -519,6 +569,8 @@ async function buildSessionView(pocketBase, record) {
     allAnswered,
     currentAnswerPlayer,
     currentAnswerPlayerVisible: record.status === 'revealing' && record.revealPhase === 'complete' && Boolean(currentAnswerPlayer),
+    currentAnswerStartedAt: record.status === 'revealing' && record.revealPhase === 'answer' ? record.updated || '' : '',
+    currentGuessSummary,
     players: players.map((entry) => ({
       id: entry.id,
       sessionCode: entry.sessionCode,
@@ -614,6 +666,10 @@ async function startRevealForSession(pocketBase, sessionRecord) {
   if (queue.length === 0) {
     throw new Error('Nessuna risposta disponibile per il reveal');
   }
+
+  await deleteRecordsBySessionCode(pocketBase, GUESS_COLLECTION, sessionRecord.code).catch((error) => {
+    console.error('[startRevealForSession:guesses]', error);
+  });
 
   return pocketBase.collection(SESSION_COLLECTION).update(sessionRecord.id, {
     status: 'revealing',
@@ -917,6 +973,58 @@ app.post('/api/sessions/:code/players/:playerId/responses', async (req, res) => 
   } catch (error) {
     console.error('[submitPlayerResponses]', error);
     res.status(500).json({ error: 'Invio risposte fallito' });
+  }
+});
+
+app.post('/api/sessions/:code/players/:playerId/guess', async (req, res) => {
+  try {
+    const pocketBase = await authenticatePocketBase();
+    const session = await getSessionByCode(pocketBase, req.params.code?.toUpperCase());
+    if (!session) {
+      return res.status(404).json({ error: 'Sessione non trovata' });
+    }
+    if (session.status !== 'revealing' || session.revealPhase !== 'answer') {
+      return res.status(400).json({ error: 'Il voto e aperto solo durante il countdown' });
+    }
+
+    const answerKey = currentAnswerKey(session);
+    if (!answerKey || !currentAnswerEntry(session)) {
+      return res.status(400).json({ error: 'Nessuna risposta attiva' });
+    }
+
+    const elapsedMs = Date.now() - (Date.parse(session.updated || '') || 0);
+    if (elapsedMs > 10000) {
+      return res.status(400).json({ error: 'Countdown terminato' });
+    }
+
+    const players = await getPlayersByCode(pocketBase, session.code);
+    const voter = players.find((entry) => entry.id === req.params.playerId);
+    const guessedPlayerId = String(req.body?.guessedPlayerId || '').trim();
+    const guessed = players.find((entry) => entry.id === guessedPlayerId);
+    if (!voter) {
+      return res.status(404).json({ error: 'Giocatore non trovato per questa sessione' });
+    }
+    if (!guessed) {
+      return res.status(400).json({ error: 'Nome scelto non valido' });
+    }
+
+    const existing = await pocketBase.collection(GUESS_COLLECTION).getFullList({
+      filter: `sessionCode="${escapeFilter(session.code)}" && answerKey="${escapeFilter(answerKey)}" && voterPlayerId="${escapeFilter(voter.id)}"`,
+    });
+    await Promise.all(existing.map((entry) => pocketBase.collection(GUESS_COLLECTION).delete(entry.id)));
+
+    const guess = await pocketBase.collection(GUESS_COLLECTION).create({
+      sessionCode: session.code,
+      answerKey,
+      voterPlayerId: voter.id,
+      guessedPlayerId: guessed.id,
+      submittedAt: new Date().toISOString(),
+    });
+
+    res.json({ guess: { guessedPlayerId: guess.guessedPlayerId } });
+  } catch (error) {
+    console.error('[submitPlayerGuess]', error);
+    res.status(500).json({ error: 'Voto non registrato' });
   }
 });
 
