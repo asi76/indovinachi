@@ -4,7 +4,7 @@ import { fetchRemoteSession, remoteAction } from '../../lib/sessionApi';
 import { guessCountdownRemaining } from '../../lib/countdown';
 import type { PublicSessionView } from '../../types';
 
-type RemoteAction = 'open-collect' | 'start-session' | 'question' | 'answer' | 'player' | 'finish';
+type RemoteAction = 'open-collect' | 'start-session' | 'question' | 'answer' | 'votes' | 'player' | 'finish';
 
 export default function RemoteController({ sessionCode, token }: { sessionCode: string; token: string }) {
   const [session, setSession] = useState<PublicSessionView | null>(null);
@@ -69,10 +69,11 @@ export default function RemoteController({ sessionCode, token }: { sessionCode: 
 
   const canOpenCollect = ['draft', 'lobby', 'finished'].includes(session.status);
   const canStartSession = ['collecting', 'ready'].includes(session.status) && session.answeredCount > 0;
-  const canQuestion = session.status === 'revealing' && ['idle', 'complete'].includes(session.revealPhase);
+  const canQuestion = session.status === 'revealing' && (['idle', 'complete'].includes(session.revealPhase) || session.currentGuessSummaryVisible);
   const canAnswer = session.status === 'revealing' && session.revealPhase === 'question' && Boolean(session.currentQuestionText);
   const countdownRemaining = guessCountdownRemaining(session, now);
-  const canPlayer = session.status === 'revealing' && session.revealPhase === 'answer' && countdownRemaining <= 0 && Boolean(session.currentAnswerText);
+  const canVotes = session.status === 'revealing' && session.revealPhase === 'answer' && countdownRemaining <= 0 && Boolean(session.currentAnswerText) && !session.currentGuessSummaryVisible;
+  const canPlayer = session.status === 'revealing' && session.revealPhase === 'answer' && session.currentGuessSummaryVisible && Boolean(session.currentAnswerText);
   const canFinish = session.status === 'revealing' || session.status === 'finished';
 
   return (
@@ -108,8 +109,11 @@ export default function RemoteController({ sessionCode, token }: { sessionCode: 
           <button onClick={() => void handleAction('answer')} disabled={!canAnswer || busy !== null} className="btn-white text-lg disabled:opacity-40">
             {busy === 'answer' ? 'Mostro...' : 'Mostra risposta'}
           </button>
+          <button onClick={() => void handleAction('votes')} disabled={!canVotes || busy !== null} className="btn-white text-lg disabled:opacity-40">
+            {busy === 'votes' ? 'Mostro...' : countdownRemaining > 0 ? `Mostra voti tra ${countdownRemaining}s` : 'Mostra voti'}
+          </button>
           <button onClick={() => void handleAction('player')} disabled={!canPlayer || busy !== null} className="btn-white text-lg disabled:opacity-40">
-            {busy === 'player' ? 'Rivelo...' : countdownRemaining > 0 ? `Mostra giocatore tra ${countdownRemaining}s` : 'Mostra giocatore'}
+            {busy === 'player' ? 'Rivelo...' : 'Mostra giocatore'}
           </button>
           <button onClick={() => void handleAction('finish')} disabled={!canFinish || busy !== null} className="py-4 border-2 border-gray-200 text-gray-600 font-black rounded-2xl hover:bg-gray-50 active:scale-95 transition-all disabled:opacity-40">
             {busy === 'finish' ? 'Chiudo...' : 'Chiudi gioco'}

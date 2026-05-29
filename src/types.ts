@@ -8,6 +8,7 @@ export interface RevealAnswerEntry {
   avatar: string;
   text: string;
   startedAt?: string;
+  votesShownAt?: string;
 }
 
 export interface GuessSummaryEntry {
@@ -67,6 +68,7 @@ export interface PublicSessionView extends IcebreakerSessionRecord {
   players: IcebreakerPlayerRecord[];
   currentAnswerPlayer: RevealAnswerEntry | null;
   currentAnswerPlayerVisible: boolean;
+  currentGuessSummaryVisible: boolean;
   currentGuessSummary: GuessSummaryEntry[];
 }
 

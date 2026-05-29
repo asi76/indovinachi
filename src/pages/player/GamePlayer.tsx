@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useParams } from 'react-router-dom';
 import { clearPlayerToken, loadPlayerToken } from '../../lib/game';
-import { guessCountdownRemaining } from '../../lib/countdown';
 import { fetchPlayer, fetchPublicSession, resolveQuestionText, submitPlayerGuess, submitPlayerResponses } from '../../lib/sessionApi';
 import type { IcebreakerPlayerRecord, PublicSessionView, QuestionLanguage } from '../../types';
 
@@ -81,7 +80,6 @@ export default function GamePlayer() {
   const [submittingGuess, setSubmittingGuess] = useState(false);
   const [error, setError] = useState('');
   const [questionLanguage, setQuestionLanguage] = useState<QuestionLanguage>(initialQuestionLanguage);
-  const [now, setNow] = useState(() => Date.now());
   const [selectedGuessId, setSelectedGuessId] = useState('');
   const [confirmedGuessId, setConfirmedGuessId] = useState('');
 
@@ -132,11 +130,6 @@ export default function GamePlayer() {
       window.clearInterval(id);
     };
   }, [code, playerId, nav]);
-
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 250);
-    return () => window.clearInterval(id);
-  }, []);
 
   useEffect(() => {
     setSelectedGuessId('');
@@ -312,11 +305,8 @@ export default function GamePlayer() {
   }
 
   if (session.status === 'revealing') {
-    const countdownRemaining = guessCountdownRemaining(session, now);
-    const votingOpen = session.revealPhase === 'answer' && countdownRemaining > 0 && !session.currentAnswerPlayerVisible;
-    const showGuessResults = ['answer', 'complete'].includes(session.revealPhase)
-      && Boolean(session.currentAnswerText)
-      && (session.revealPhase === 'complete' || countdownRemaining <= 0);
+    const votingOpen = session.revealPhase === 'answer' && !session.currentGuessSummaryVisible && !session.currentAnswerPlayerVisible;
+    const showGuessResults = Boolean(session.currentGuessSummaryVisible);
     const selectedGuess = session.players.find((entry) => entry.id === selectedGuessId) || null;
     const confirmedGuess = session.players.find((entry) => entry.id === confirmedGuessId) || null;
 

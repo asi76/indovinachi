@@ -139,10 +139,9 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
     const countdownRemaining = session.revealPhase === 'answer'
       ? guessCountdownRemaining(session, now)
       : 0;
-    const showGuessCountdown = session.revealPhase === 'answer' && !showAnswerPlayer && countdownRemaining > 0;
-    const showGuessResults = ['answer', 'complete'].includes(session.revealPhase)
-      && Boolean(session.currentAnswerText)
-      && (session.revealPhase === 'complete' || countdownRemaining <= 0);
+    const showGuessCountdown = session.revealPhase === 'answer' && !showAnswerPlayer && !session.currentGuessSummaryVisible && countdownRemaining > 0;
+    const showVotingOpen = session.revealPhase === 'answer' && !showAnswerPlayer && !session.currentGuessSummaryVisible && countdownRemaining <= 0;
+    const showGuessResults = Boolean(session.currentGuessSummaryVisible);
     const answerKey = `${session.currentQuestionIndex}:${session.currentAnswerIndex}`;
 
     return (
@@ -217,6 +216,13 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
               {countdownRemaining}
             </motion.div>
           </motion.div>
+        ) : null}
+
+        {showVotingOpen ? (
+          <div className="bg-white/10 border border-white/20 rounded-3xl px-10 py-6 text-center">
+            <p className="text-purple-200 font-black tracking-widest text-sm mb-2">VOTAZIONE APERTA</p>
+            <p className="text-white font-black text-3xl">Attendi Mostra voti dal telecomando</p>
+          </div>
         ) : null}
 
         {showGuessResults ? <GuessResultsModal session={session} /> : null}

@@ -543,6 +543,7 @@ async function buildSessionView(pocketBase, record) {
   const allAnswered = players.length > 0 && answeredCount === players.length;
   const currentAnswerPlayer = currentAnswerEntry(record);
   const answerStartedAt = currentAnswerStartedAt(record);
+  const guessSummaryVisible = Boolean(currentAnswerVotesShownAt(record)) || record.revealPhase === 'complete';
   const currentGuessSummary = await getGuessSummary(pocketBase, record, players);
 
   return {
@@ -575,6 +576,7 @@ async function buildSessionView(pocketBase, record) {
     allAnswered,
     currentAnswerPlayer,
     currentAnswerPlayerVisible: record.status === 'revealing' && record.revealPhase === 'complete' && Boolean(currentAnswerPlayer),
+    currentGuessSummaryVisible: record.status === 'revealing' && Boolean(record.currentAnswerText) && guessSummaryVisible,
     currentGuessSummary,
     players: players.map((entry) => ({
       id: entry.id,
@@ -703,6 +705,11 @@ function currentAnswerStartedAt(sessionRecord) {
       ? sessionRecord.updated || ''
       : ''
   );
+}
+
+function currentAnswerVotesShownAt(sessionRecord) {
+  const answer = currentAnswerEntry(sessionRecord);
+  return answer?.votesShownAt || '';
 }
 
 app.post('/api/auth/session', requireAuthorizedHost, async (req, res) => {
@@ -994,12 +1001,15 @@ app.post('/api/sessions/:code/players/:playerId/guess', async (req, res) => {
       return res.status(404).json({ error: 'Sessione non trovata' });
     }
     if (session.status !== 'revealing' || session.revealPhase !== 'answer') {
-      return res.status(400).json({ error: 'Il voto e aperto solo durante il countdown' });
+      return res.status(400).json({ error: 'Il voto non e aperto' });
     }
 
     const answerKey = currentAnswerKey(session);
     if (!answerKey || !currentAnswerEntry(session)) {
       return res.status(400).json({ error: 'Nessuna risposta attiva' });
+    }
+    if (currentAnswerVotesShownAt(session)) {
+      return res.status(400).json({ error: 'Voto chiuso' });
     }
 
     const players = await getPlayersByCode(pocketBase, session.code);
@@ -1276,6 +1286,33 @@ app.post('/api/sessions/:code/reveal/answer', requireRemoteSession, async (req, 
   } catch (error) {
     console.error('[revealAnswer]', error);
     res.status(400).json({ error: error instanceof Error ? error.message : 'Impossibile mostrare la risposta' });
+  }
+});
+
+app.post('/api/sessions/:code/reveal/votes', requireRemoteSession, async (req, res) => {
+  try {
+    const answer = currentAnswerEntry(req.sessionRecord);
+    if (!answer || req.sessionRecord.revealPhase !== 'answer') {
+      return res.status(400).json({ error: 'Nessun voto attivo' });
+    }
+    const revealQueue = Array.isArray(req.sessionRecord.revealQueue)
+      ? JSON.parse(JSON.stringify(req.sessionRecord.revealQueue))
+      : [];
+    const questionIndex = req.sessionRecord.currentQuestionIndex;
+    const answerIndex = req.sessionRecord.currentAnswerIndex;
+    if (!revealQueue[questionIndex]?.answers?.[answerIndex]) {
+      return res.status(400).json({ error: 'Nessuna risposta attiva' });
+    }
+    revealQueue[questionIndex].answers[answerIndex].votesShownAt ||= new Date().toISOString();
+    const updated = await req.pocketBase.collection(SESSION_COLLECTION).update(req.sessionRecord.id, {
+      revealQueue,
+      discoSpin: nextDiscoSpin(req.sessionRecord.discoSpin),
+    });
+    const session = await buildSessionView(req.pocketBase, updated);
+    res.json({ session });
+  } catch (error) {
+    console.error('[revealVotes]', error);
+    res.status(400).json({ error: error instanceof Error ? error.message : 'Impossibile mostrare i voti' });
   }
 });
 
