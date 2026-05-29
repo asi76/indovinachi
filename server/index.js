@@ -25,7 +25,6 @@ const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'asi.vong@gmail.com').toLowerCas
 const SESSION_COLLECTION = 'icebreaker_sessions';
 const PLAYER_COLLECTION = 'icebreaker_players';
 const RESPONSE_COLLECTION = 'icebreaker_responses';
-const GUESS_COLLECTION = 'icebreaker_guesses';
 const QUESTION_COLLECTION = 'icebreaker_questions';
 const DEFAULT_QUESTIONS_JSON = process.env.DEFAULT_QUESTIONS_JSON || '/home/asi/Hämtningar/domande.json';
 let defaultQuestionsSeeded = false;
@@ -388,7 +387,7 @@ async function getResponsesByCode(pocketBase, code) {
   const responses = await pocketBase.collection(RESPONSE_COLLECTION).getFullList({
     filter: `sessionCode="${escapeFilter(code)}"`,
   });
-  return [...responses].sort((left, right) => {
+  return responses.filter((entry) => !String(entry.questionId || '').startsWith('__guess__:')).sort((left, right) => {
     const leftQuestionIndex = Number.isFinite(left.questionIndex) ? Number(left.questionIndex) : 0;
     const rightQuestionIndex = Number.isFinite(right.questionIndex) ? Number(right.questionIndex) : 0;
     if (leftQuestionIndex !== rightQuestionIndex) return leftQuestionIndex - rightQuestionIndex;
@@ -405,14 +404,18 @@ function currentAnswerKey(sessionRecord) {
   return `${questionIndex}:${answerIndex}`;
 }
 
+function guessQuestionId(answerKey) {
+  return `__guess__:${answerKey}`;
+}
+
 async function getGuessSummary(pocketBase, sessionRecord, players) {
   const answerKey = currentAnswerKey(sessionRecord);
   if (!answerKey || players.length === 0) return [];
 
   let guesses = [];
   try {
-    guesses = await pocketBase.collection(GUESS_COLLECTION).getFullList({
-      filter: `sessionCode="${escapeFilter(sessionRecord.code)}" && answerKey="${escapeFilter(answerKey)}"`,
+    guesses = await pocketBase.collection(RESPONSE_COLLECTION).getFullList({
+      filter: `sessionCode="${escapeFilter(sessionRecord.code)}" && questionId="${escapeFilter(guessQuestionId(answerKey))}"`,
     });
   } catch (error) {
     console.error('[getGuessSummary]', error);
@@ -422,8 +425,9 @@ async function getGuessSummary(pocketBase, sessionRecord, players) {
   const playersById = new Map(players.map((player) => [player.id, player]));
   const counts = new Map();
   for (const guess of guesses) {
-    if (!playersById.has(guess.guessedPlayerId)) continue;
-    counts.set(guess.guessedPlayerId, (counts.get(guess.guessedPlayerId) || 0) + 1);
+    const guessedPlayerId = guess.answerText;
+    if (!playersById.has(guessedPlayerId)) continue;
+    counts.set(guessedPlayerId, (counts.get(guessedPlayerId) || 0) + 1);
   }
   const validVoteCount = Array.from(counts.values()).reduce((total, count) => total + count, 0);
   if (validVoteCount === 0) return [];
@@ -458,9 +462,6 @@ async function deleteRecordsBySessionCode(pocketBase, collectionName, code) {
 }
 
 async function clearSessionParticipants(pocketBase, code) {
-  await deleteRecordsBySessionCode(pocketBase, GUESS_COLLECTION, code).catch((error) => {
-    console.error('[clearSessionParticipants:guesses]', error);
-  });
   await deleteRecordsBySessionCode(pocketBase, RESPONSE_COLLECTION, code);
   await deleteRecordsBySessionCode(pocketBase, PLAYER_COLLECTION, code);
 }
@@ -524,7 +525,6 @@ async function resetSessionForCollecting(pocketBase, sessionRecord, questions) {
     currentAnswerIndex: -1,
     currentQuestionText: '',
     currentAnswerText: '',
-    currentAnswerStartedAt: '',
     revealPhase: 'idle',
     assignedQuestionIds: playerAssignments.assignmentState || serializeAssignmentState(state.mode, []),
     discoSpin: nextDiscoSpin(sessionRecord.discoSpin),
@@ -563,7 +563,7 @@ async function buildSessionView(pocketBase, record) {
     currentAnswerIndex: typeof record.currentAnswerIndex === 'number' ? record.currentAnswerIndex : -1,
     currentQuestionText: record.currentQuestionText || '',
     currentAnswerText: record.currentAnswerText || '',
-    currentAnswerStartedAt: record.currentAnswerStartedAt || '',
+    currentAnswerStartedAt: record.currentAnswerStartedAt || (record.status === 'revealing' && record.currentAnswerText ? record.updated || '' : ''),
     revealPhase: record.revealPhase || 'idle',
     discoSpin: typeof record.discoSpin === 'number' ? record.discoSpin : 0,
     created: record.created || '',
@@ -670,10 +670,6 @@ async function startRevealForSession(pocketBase, sessionRecord) {
     throw new Error('Nessuna risposta disponibile per il reveal');
   }
 
-  await deleteRecordsBySessionCode(pocketBase, GUESS_COLLECTION, sessionRecord.code).catch((error) => {
-    console.error('[startRevealForSession:guesses]', error);
-  });
-
   return pocketBase.collection(SESSION_COLLECTION).update(sessionRecord.id, {
     status: 'revealing',
     revealQueue: queue,
@@ -681,7 +677,6 @@ async function startRevealForSession(pocketBase, sessionRecord) {
     currentAnswerIndex: -1,
     currentQuestionText: '',
     currentAnswerText: '',
-    currentAnswerStartedAt: '',
     revealPhase: 'idle',
     discoSpin: nextDiscoSpin(sessionRecord.discoSpin),
   });
@@ -832,7 +827,6 @@ app.post('/api/sessions', requireAuthorizedHost, async (req, res) => {
       currentAnswerIndex: -1,
       currentQuestionText: '',
       currentAnswerText: '',
-      currentAnswerStartedAt: '',
       revealPhase: 'idle',
       discoSpin: 0,
     });
@@ -997,7 +991,7 @@ app.post('/api/sessions/:code/players/:playerId/guess', async (req, res) => {
       return res.status(400).json({ error: 'Nessuna risposta attiva' });
     }
 
-    const elapsedMs = Date.now() - (Date.parse(session.currentAnswerStartedAt || '') || 0);
+    const elapsedMs = Date.now() - (Date.parse(session.currentAnswerStartedAt || session.updated || '') || 0);
     if (elapsedMs > 10000) {
       return res.status(400).json({ error: 'Countdown terminato' });
     }
@@ -1013,20 +1007,24 @@ app.post('/api/sessions/:code/players/:playerId/guess', async (req, res) => {
       return res.status(400).json({ error: 'Nome scelto non valido' });
     }
 
-    const existing = await pocketBase.collection(GUESS_COLLECTION).getFullList({
-      filter: `sessionCode="${escapeFilter(session.code)}" && answerKey="${escapeFilter(answerKey)}" && voterPlayerId="${escapeFilter(voter.id)}"`,
+    const existing = await pocketBase.collection(RESPONSE_COLLECTION).getFullList({
+      filter: `sessionCode="${escapeFilter(session.code)}" && questionId="${escapeFilter(guessQuestionId(answerKey))}" && playerId="${escapeFilter(voter.id)}"`,
     });
-    await Promise.all(existing.map((entry) => pocketBase.collection(GUESS_COLLECTION).delete(entry.id)));
+    await Promise.all(existing.map((entry) => pocketBase.collection(RESPONSE_COLLECTION).delete(entry.id)));
 
-    const guess = await pocketBase.collection(GUESS_COLLECTION).create({
+    const guess = await pocketBase.collection(RESPONSE_COLLECTION).create({
       sessionCode: session.code,
-      answerKey,
-      voterPlayerId: voter.id,
-      guessedPlayerId: guessed.id,
+      playerId: voter.id,
+      playerNickname: voter.nickname,
+      playerAvatar: voter.avatar,
+      questionId: guessQuestionId(answerKey),
+      questionIndex: 0,
+      questionText: 'guess',
+      answerText: guessed.id,
       submittedAt: new Date().toISOString(),
     });
 
-    res.json({ guess: { guessedPlayerId: guess.guessedPlayerId } });
+    res.json({ guess: { guessedPlayerId: guess.answerText } });
   } catch (error) {
     console.error('[submitPlayerGuess]', error);
     res.status(500).json({ error: 'Voto non registrato' });
@@ -1148,7 +1146,6 @@ app.post('/api/sessions/:code/terminate', requireAuthorizedHost, requireOwnedSes
       currentAnswerIndex: -1,
       currentQuestionText: '',
       currentAnswerText: '',
-      currentAnswerStartedAt: '',
       revealPhase: 'idle',
       discoSpin: 0,
     });
@@ -1197,7 +1194,6 @@ app.post('/api/sessions/:code/close', requireAuthorizedHost, requireOwnedSession
       currentAnswerIndex: -1,
       currentQuestionText: '',
       currentAnswerText: '',
-      currentAnswerStartedAt: '',
       revealPhase: 'complete',
       assignedQuestionIds: serializeAssignmentState(assignmentState(req.sessionRecord).mode, []),
       discoSpin: nextDiscoSpin(req.sessionRecord.discoSpin),
@@ -1224,7 +1220,6 @@ app.post('/api/sessions/:code/reveal/question', requireRemoteSession, async (req
         status: 'finished',
         revealPhase: 'complete',
         currentAnswerText: '',
-        currentAnswerStartedAt: '',
       });
       const session = await buildSessionView(req.pocketBase, finished);
       return res.json({ session });
@@ -1234,7 +1229,6 @@ app.post('/api/sessions/:code/reveal/question', requireRemoteSession, async (req
       currentAnswerIndex: -1,
       currentQuestionText: queue[nextIndex].prompt,
       currentAnswerText: '',
-      currentAnswerStartedAt: '',
       revealPhase: 'question',
       discoSpin: nextDiscoSpin(record.discoSpin),
     });
@@ -1259,7 +1253,6 @@ app.post('/api/sessions/:code/reveal/answer', requireRemoteSession, async (req, 
     const updated = await req.pocketBase.collection(SESSION_COLLECTION).update(req.sessionRecord.id, {
       currentAnswerIndex: nextIndex,
       currentAnswerText: revealItem.answers[nextIndex].text,
-      currentAnswerStartedAt: new Date().toISOString(),
       revealPhase: 'answer',
       discoSpin: nextDiscoSpin(req.sessionRecord.discoSpin),
     });
@@ -1301,7 +1294,6 @@ app.post('/api/sessions/:code/reveal/finish', requireRemoteSession, async (req, 
       currentQuestionText: '',
       revealPhase: 'complete',
       currentAnswerText: '',
-      currentAnswerStartedAt: '',
       assignedQuestionIds: serializeAssignmentState(assignmentState(req.sessionRecord).mode, []),
       discoSpin: nextDiscoSpin(req.sessionRecord.discoSpin),
     });

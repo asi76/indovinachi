@@ -40,7 +40,6 @@
       { "name": "currentAnswerIndex", "type": "number", "required": false, "min": -1, "max": 5000, "noDecimal": true },
       { "name": "currentQuestionText", "type": "text", "required": false, "max": 500 },
       { "name": "currentAnswerText", "type": "text", "required": false, "max": 1000 },
-      { "name": "currentAnswerStartedAt", "type": "date", "required": false },
       { "name": "revealPhase", "type": "select", "required": false, "maxSelect": 1, "values": ["idle", "question", "answer", "complete"] },
       { "name": "discoSpin", "type": "number", "required": false, "min": 0, "max": 9999999, "noDecimal": true }
     ],
@@ -87,26 +86,6 @@
     "indexes": [
       "CREATE INDEX idx_icebreaker_responses_session_code ON icebreaker_responses (sessionCode)",
       "CREATE INDEX idx_icebreaker_responses_player ON icebreaker_responses (playerId)"
-    ]
-  },
-  {
-    "name": "icebreaker_guesses",
-    "type": "base",
-    "listRule": "",
-    "viewRule": "",
-    "createRule": null,
-    "updateRule": null,
-    "deleteRule": null,
-    "fields": [
-      { "name": "sessionCode", "type": "text", "required": true, "min": 6, "max": 6 },
-      { "name": "answerKey", "type": "text", "required": true, "max": 32 },
-      { "name": "voterPlayerId", "type": "text", "required": true, "max": 32 },
-      { "name": "guessedPlayerId", "type": "text", "required": true, "max": 32 },
-      { "name": "submittedAt", "type": "date", "required": true }
-    ],
-    "indexes": [
-      "CREATE INDEX idx_icebreaker_guesses_session_code ON icebreaker_guesses (sessionCode)",
-      "CREATE UNIQUE INDEX idx_icebreaker_guesses_answer_voter ON icebreaker_guesses (sessionCode, answerKey, voterPlayerId)"
     ]
   },
   {

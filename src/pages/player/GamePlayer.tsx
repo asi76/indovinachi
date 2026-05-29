@@ -297,14 +297,14 @@ export default function GamePlayer() {
   }
 
   if (session.status === 'revealing') {
-    const answerStartedAt = Date.parse(session.currentAnswerStartedAt || '') || 0;
+    const answerStartedAt = Date.parse(session.currentAnswerStartedAt || session.updated || '') || 0;
     const elapsedSeconds = answerStartedAt > 0 ? (now - answerStartedAt) / 1000 : 0;
     const countdownRemaining = session.revealPhase === 'answer'
       ? Math.max(0, Math.ceil(GUESS_COUNTDOWN_SECONDS - elapsedSeconds))
       : 0;
     const votingOpen = session.revealPhase === 'answer' && countdownRemaining > 0 && !session.currentAnswerPlayerVisible;
     const showGuessResults = ['answer', 'complete'].includes(session.revealPhase)
-      && Boolean(session.currentAnswerStartedAt)
+      && Boolean(session.currentAnswerText)
       && (session.revealPhase === 'complete' || countdownRemaining <= 0);
     const selectedGuess = session.players.find((entry) => entry.id === selectedGuessId) || null;
     const confirmedGuess = session.players.find((entry) => entry.id === confirmedGuessId) || null;

@@ -22,7 +22,7 @@ function waitingMessage(session: PublicSessionView) {
 }
 
 function guessCountdownRemaining(session: PublicSessionView, now: number) {
-  const answerStartedAt = Date.parse(session.currentAnswerStartedAt || '') || 0;
+  const answerStartedAt = Date.parse(session.currentAnswerStartedAt || session.updated || '') || 0;
   const elapsedSeconds = answerStartedAt > 0 ? (now - answerStartedAt) / 1000 : 0;
   return Math.max(0, Math.ceil(GUESS_COUNTDOWN_SECONDS - elapsedSeconds));
 }
@@ -127,7 +127,7 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
       : 0;
     const showGuessCountdown = session.revealPhase === 'answer' && !showAnswerPlayer && countdownRemaining > 0;
     const showGuessResults = ['answer', 'complete'].includes(session.revealPhase)
-      && Boolean(session.currentAnswerStartedAt)
+      && Boolean(session.currentAnswerText)
       && (session.revealPhase === 'complete' || countdownRemaining <= 0);
     const answerKey = `${session.currentQuestionIndex}:${session.currentAnswerIndex}`;
 
