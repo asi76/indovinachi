@@ -14,6 +14,19 @@ function getCtx() {
 export function resumeSoundboard() {
   const ctx = getCtx();
   if (ctx?.state === 'suspended') void ctx.resume();
+  if (!ctx) return;
+
+  const now = ctx.currentTime;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
+  gain.connect(ctx.destination);
+
+  const osc = ctx.createOscillator();
+  osc.frequency.setValueAtTime(20, now);
+  osc.connect(gain);
+  osc.start(now);
+  osc.stop(now + 0.03);
 }
 
 export function playUiClick() {

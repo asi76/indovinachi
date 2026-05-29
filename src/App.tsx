@@ -12,6 +12,7 @@ import Join from './pages/player/Join';
 import Nickname from './pages/player/Nickname';
 import GamePlayer from './pages/player/GamePlayer';
 import RemoteController from './pages/remote/Controller';
+import { resumeSoundboard } from './lib/soundboard';
 
 function HostGuard({ children }: { children: ReactNode }) {
   const { loading, data } = useAuth();
@@ -96,6 +97,18 @@ function AppRoutes() {
 }
 
 export default function App() {
+  useEffect(() => {
+    const unlock = () => resumeSoundboard();
+    window.addEventListener('pointerdown', unlock, { capture: true });
+    window.addEventListener('keydown', unlock, { capture: true });
+    window.addEventListener('touchstart', unlock, { capture: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock, { capture: true });
+      window.removeEventListener('keydown', unlock, { capture: true });
+      window.removeEventListener('touchstart', unlock, { capture: true });
+    };
+  }, []);
+
   return (
     <I18nProvider>
       <AuthProvider>

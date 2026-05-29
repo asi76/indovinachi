@@ -1253,6 +1253,7 @@ app.post('/api/sessions/:code/reveal/answer', requireRemoteSession, async (req, 
     const updated = await req.pocketBase.collection(SESSION_COLLECTION).update(req.sessionRecord.id, {
       currentAnswerIndex: nextIndex,
       currentAnswerText: revealItem.answers[nextIndex].text,
+      currentAnswerStartedAt: new Date().toISOString(),
       revealPhase: 'answer',
       discoSpin: nextDiscoSpin(req.sessionRecord.discoSpin),
     });

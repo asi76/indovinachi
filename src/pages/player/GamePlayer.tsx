@@ -326,34 +326,37 @@ export default function GamePlayer() {
         ) : null}
         {votingOpen ? (
           <div className="w-full max-w-lg">
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <h2 className="text-white font-black text-2xl">Indovina Chi?</h2>
-              <div className="bg-white/15 text-white font-black rounded-2xl px-4 py-2">{countdownRemaining}s</div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {session.players.map((entry) => {
-                const isConfirmed = confirmedGuessId === entry.id;
-                return (
-                  <button
-                    key={entry.id}
-                    type="button"
-                    onClick={() => setSelectedGuessId(entry.id)}
-                    disabled={submittingGuess}
-                    className={`min-h-[102px] rounded-2xl px-3 py-3 text-center transition-colors ${isConfirmed ? 'bg-yellow-400 text-gray-900' : 'bg-white/15 text-white active:bg-white/25'}`}
-                  >
-                    <div className="text-3xl mb-1">{entry.avatar}</div>
-                    <div className="font-black text-sm leading-tight">{entry.nickname}</div>
-                  </button>
-                );
-              })}
-            </div>
             {confirmedGuess ? (
-              <p className="text-purple-200 text-center font-bold mt-3">Scelta confermata: {confirmedGuess.avatar} {confirmedGuess.nickname}</p>
-            ) : null}
+              <div className="bg-white/10 rounded-2xl px-5 py-5 text-center">
+                <p className="text-white font-black text-2xl">Attendi</p>
+                <p className="text-purple-200 text-center font-bold mt-2">Scelta confermata: {confirmedGuess.avatar} {confirmedGuess.nickname}</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <h2 className="text-white font-black text-2xl">Indovina Chi?</h2>
+                  <div className="bg-white/15 text-white font-black rounded-2xl px-4 py-2">{countdownRemaining}s</div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {session.players.map((entry) => (
+                    <button
+                      key={entry.id}
+                      type="button"
+                      onClick={() => setSelectedGuessId(entry.id)}
+                      disabled={submittingGuess}
+                      className="min-h-[102px] rounded-2xl px-3 py-3 text-center transition-colors bg-white/15 text-white active:bg-white/25"
+                    >
+                      <div className="text-3xl mb-1">{entry.avatar}</div>
+                      <div className="font-black text-sm leading-tight">{entry.nickname}</div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         ) : showGuessResults ? null : (
           <div className="w-full max-w-lg bg-white/10 rounded-2xl px-5 py-4 text-center">
-            <p className="text-white font-black">{session.revealPhase === 'answer' ? 'Votazione chiusa' : 'Aspetta il prossimo voto'}</p>
+            <p className="text-white font-black">{session.revealPhase === 'answer' ? 'Votazione chiusa' : 'Attendi'}</p>
           </div>
         )}
 
