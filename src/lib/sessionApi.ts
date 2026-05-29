@@ -1,6 +1,6 @@
 import { auth } from './firebase';
 import { pb } from './pocketbase';
-import type { IcebreakerPlayerRecord, MultilingualQuestion, PublicSessionView, QuestionLanguage, QuestionMode } from '../types';
+import type { IcebreakerPlayerRecord, IcebreakerResponseRecord, MultilingualQuestion, PublicSessionView, QuestionLanguage, QuestionMode } from '../types';
 import { attachClientTiming } from './countdown';
 
 async function authorizedFetch(path: string, init?: RequestInit) {
@@ -58,6 +58,19 @@ export async function closeHostSession(code: string): Promise<PublicSessionView>
 export async function terminateHostSession(code: string): Promise<PublicSessionView> {
   const payload = await authorizedFetch(`/api/sessions/${code}/terminate`, { method: 'POST' });
   return attachClientTiming(payload.session as PublicSessionView);
+}
+
+export async function fetchSessionResponses(code: string): Promise<IcebreakerResponseRecord[]> {
+  const payload = await authorizedFetch(`/api/sessions/${code}/responses`);
+  return (payload.responses || []) as IcebreakerResponseRecord[];
+}
+
+export async function updateSessionResponse(code: string, responseId: string, answerText: string): Promise<IcebreakerResponseRecord> {
+  const payload = await authorizedFetch(`/api/sessions/${code}/responses/${encodeURIComponent(responseId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ answerText }),
+  });
+  return payload.response as IcebreakerResponseRecord;
 }
 
 export async function fetchPublicSession(code: string): Promise<PublicSessionView> {

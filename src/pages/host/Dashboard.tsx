@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion } from 'framer-motion';
 import { signOutFromGoogle } from '../../lib/firebase';
-import { closeHostSession, createHostSession, fetchHostSessions, fetchQuestionBank, openCollecting, saveHostSessionConfig, startSession, terminateHostSession } from '../../lib/sessionApi';
+import { closeHostSession, createHostSession, fetchHostSessions, fetchQuestionBank, fetchSessionResponses, openCollecting, saveHostSessionConfig, startSession, terminateHostSession, updateSessionResponse } from '../../lib/sessionApi';
 import { joinUrl, presenterUrl, remoteUrl, sessionStatusLabel } from '../../lib/game';
-import type { MultilingualQuestion, PublicSessionView, QuestionMode } from '../../types';
+import type { IcebreakerResponseRecord, MultilingualQuestion, PublicSessionView, QuestionMode } from '../../types';
 import IceBreakerLogo from '../../components/IceBreakerLogo';
 
 function parseLines(value: string) {
@@ -18,11 +18,13 @@ export default function HostDashboard() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [titleDraft, setTitleDraft] = useState('IceBreaker');
-  const [themeDraft, setThemeDraft] = useState('Party room viola, luci da quiz show, reveal teatrale');
+  const [themeDraft, setThemeDraft] = useState('Party room blu scuro, luci da quiz show, reveal teatrale');
   const [questionDraft, setQuestionDraft] = useState('');
   const [questionCountDraft, setQuestionCountDraft] = useState(3);
   const [questionModeDraft, setQuestionModeDraft] = useState<QuestionMode>('direct');
   const [questionBank, setQuestionBank] = useState<MultilingualQuestion[]>([]);
+  const [responses, setResponses] = useState<IcebreakerResponseRecord[]>([]);
+  const [responseDrafts, setResponseDrafts] = useState<Record<string, string>>({});
 
   const session = useMemo(() => sessions[0] || null, [sessions]);
 
@@ -46,6 +48,37 @@ export default function HostDashboard() {
       window.clearInterval(id);
     };
   }, []);
+
+  useEffect(() => {
+    if (!session) {
+      setResponses([]);
+      setResponseDrafts({});
+      return;
+    }
+
+    let active = true;
+    async function loadResponses() {
+      try {
+        const loaded = await fetchSessionResponses(session.code);
+        if (!active) return;
+        setResponses(loaded);
+        setResponseDrafts((current) => {
+          const next: Record<string, string> = {};
+          for (const response of loaded) next[response.id] = current[response.id] ?? response.answerText;
+          return next;
+        });
+      } catch (loadError) {
+        if (active) setError(loadError instanceof Error ? loadError.message : 'Errore caricamento risposte');
+      }
+    }
+
+    void loadResponses();
+    const id = window.setInterval(() => { void loadResponses(); }, 5000);
+    return () => {
+      active = false;
+      window.clearInterval(id);
+    };
+  }, [session?.code]);
 
   useEffect(() => {
     let active = true;
@@ -193,6 +226,26 @@ export default function HostDashboard() {
     }
   }
 
+  async function handleUpdateResponse(responseId: string) {
+    if (!session) return;
+    const answerText = (responseDrafts[responseId] || '').trim();
+    if (!answerText) {
+      setError('La risposta non puo essere vuota');
+      return;
+    }
+    setBusy(`response-${responseId}`);
+    setError('');
+    try {
+      const updated = await updateSessionResponse(session.code, responseId, answerText);
+      setResponses((current) => current.map((response) => (response.id === responseId ? updated : response)));
+      setResponseDrafts((current) => ({ ...current, [responseId]: updated.answerText }));
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : 'Risposta non aggiornata');
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const directQuestionCount = parseLines(questionDraft).length;
   const isCollecting = session?.status === 'collecting' || session?.status === 'ready';
   const isLive = session?.status === 'revealing';
@@ -208,7 +261,7 @@ export default function HostDashboard() {
       <header className="app-bg shadow-lg">
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
           <IceBreakerLogo className="text-[2.1rem]" />
-          <button onClick={() => void signOutFromGoogle().then(() => window.location.reload())} className="text-purple-300 hover:text-white text-sm font-bold transition-colors">
+          <button onClick={() => void signOutFromGoogle().then(() => window.location.reload())} className="text-blue-300 hover:text-white text-sm font-bold transition-colors">
             Logout
           </button>
         </div>
@@ -249,10 +302,10 @@ export default function HostDashboard() {
             <div className="card">
               <div className="flex items-center justify-between mb-5">
                 <div>
-                  <p className="text-purple-400 font-black tracking-widest text-xs">SESSIONE {session.code}</p>
+                  <p className="text-blue-400 font-black tracking-widest text-xs">SESSIONE {session.code}</p>
                   <h3 className="text-3xl font-black text-gray-800 mt-1">{session.title}</h3>
                 </div>
-                <span className="bg-purple-100 text-purple-700 text-sm font-black px-4 py-2 rounded-full">{sessionStatusLabel(session.status)}</span>
+                <span className="bg-blue-100 text-blue-700 text-sm font-black px-4 py-2 rounded-full">{sessionStatusLabel(session.status)}</span>
               </div>
 
               {isCollecting ? (
@@ -284,7 +337,7 @@ export default function HostDashboard() {
                 </div>
               </div>
 
-              <div className="mb-5 rounded-2xl border border-purple-100 bg-purple-50/60 p-4">
+              <div className="mb-5 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
                 <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
                   <div>
                     <label className="block text-xs font-black tracking-widest text-gray-500 mb-2">Assegnazione al check-in</label>
@@ -293,7 +346,7 @@ export default function HostDashboard() {
                       onClick={() => void handleQuestionModeToggle()}
                       className="inline-flex items-center gap-3 rounded-full bg-white px-4 py-2 font-black text-gray-800 shadow-sm"
                     >
-                      <span className={`h-7 w-12 rounded-full p-1 transition-colors ${questionModeDraft === 'random' ? 'bg-purple-700' : 'bg-gray-300'}`}>
+                      <span className={`h-7 w-12 rounded-full p-1 transition-colors ${questionModeDraft === 'random' ? 'bg-blue-700' : 'bg-gray-300'}`}>
                         <span className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${questionModeDraft === 'random' ? 'translate-x-5' : ''}`} />
                       </span>
                       {questionModeDraft === 'direct' ? 'Domande dirette' : 'Domande casuali dal database'}
@@ -313,7 +366,7 @@ export default function HostDashboard() {
                     />
                   </div>
                 </div>
-                <div className="mt-3 text-sm font-bold text-purple-800">
+                <div className="mt-3 text-sm font-bold text-blue-800">
                   {questionModeDraft === 'direct'
                     ? `${directQuestionCount} domande dirette verranno date uguali a tutti i giocatori.`
                     : `${questionBank.length} domande attive nel database, ${questionCountDraft} per ogni giocatore.`}
@@ -353,17 +406,17 @@ export default function HostDashboard() {
               <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="card">
                 <h3 className="text-2xl font-black text-gray-800 mb-4">Accessi rapidi</h3>
                 <div className="grid grid-cols-3 gap-3 text-center">
-                  <a href={joinUrl(session)} target="_blank" rel="noreferrer" className="bg-purple-50 rounded-2xl p-3 hover:bg-purple-100 transition-colors">
+                  <a href={joinUrl(session)} target="_blank" rel="noreferrer" className="bg-blue-50 rounded-2xl p-3 hover:bg-blue-100 transition-colors">
                     <QRCodeSVG value={joinUrl(session)} size={92} includeMargin className="mx-auto mb-2" />
-                    <span className="text-xs font-black text-purple-700">Giocatori</span>
+                    <span className="text-xs font-black text-blue-700">Giocatori</span>
                   </a>
-                  <a href={presenterUrl(session)} target="_blank" rel="noreferrer" className="bg-purple-50 rounded-2xl p-3 hover:bg-purple-100 transition-colors">
+                  <a href={presenterUrl(session)} target="_blank" rel="noreferrer" className="bg-blue-50 rounded-2xl p-3 hover:bg-blue-100 transition-colors">
                     <QRCodeSVG value={presenterUrl(session)} size={92} includeMargin className="mx-auto mb-2" />
-                    <span className="text-xs font-black text-purple-700">Schermo</span>
+                    <span className="text-xs font-black text-blue-700">Schermo</span>
                   </a>
-                  <a href={remoteUrl(session)} target="_blank" rel="noreferrer" className="bg-purple-50 rounded-2xl p-3 hover:bg-purple-100 transition-colors">
+                  <a href={remoteUrl(session)} target="_blank" rel="noreferrer" className="bg-blue-50 rounded-2xl p-3 hover:bg-blue-100 transition-colors">
                     <QRCodeSVG value={remoteUrl(session)} size={92} includeMargin className="mx-auto mb-2" />
-                    <span className="text-xs font-black text-purple-700">Telecomando</span>
+                    <span className="text-xs font-black text-blue-700">Telecomando</span>
                   </a>
                 </div>
               </motion.div>
@@ -390,6 +443,43 @@ export default function HostDashboard() {
                     <span key={player.id} className="bg-white/80 border border-gray-200 text-gray-800 text-sm px-3 py-1 rounded-full font-semibold shrink-0">
                       {player.avatar} {player.nickname}
                     </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="card">
+                <div className="mb-4">
+                  <h3 className="text-2xl font-black text-gray-800">Risposte giocatori</h3>
+                  <p className="text-sm font-semibold text-gray-500 mt-1">Modifica qui il testo italiano che verra mostrato sul maxischermo.</p>
+                </div>
+                <div className="flex flex-col gap-3 max-h-[34rem] overflow-y-auto pr-1">
+                  {responses.length === 0 ? (
+                    <p className="text-gray-400 font-bold text-center py-6">Nessuna risposta inviata</p>
+                  ) : responses.map((response) => (
+                    <div key={response.id} className="rounded-2xl border border-gray-200 bg-white/80 p-3">
+                      <div className="flex items-center justify-between gap-3 mb-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-black tracking-widest text-blue-700">DOMANDA {response.questionIndex}</p>
+                          <p className="text-sm font-bold text-gray-500 truncate">{response.questionText}</p>
+                        </div>
+                        <span className="shrink-0 text-sm font-black text-gray-800">{response.playerAvatar} {response.playerNickname}</span>
+                      </div>
+                      <textarea
+                        className="input-field min-h-[82px] text-sm"
+                        value={responseDrafts[response.id] ?? response.answerText}
+                        onChange={(event) => setResponseDrafts((current) => ({ ...current, [response.id]: event.target.value }))}
+                      />
+                      <div className="flex justify-end mt-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleUpdateResponse(response.id)}
+                          disabled={busy === `response-${response.id}` || (responseDrafts[response.id] ?? response.answerText).trim() === response.answerText}
+                          className="btn-purple py-2 px-4 text-sm disabled:opacity-40"
+                        >
+                          {busy === `response-${response.id}` ? 'Salvo...' : 'Salva risposta'}
+                        </button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>

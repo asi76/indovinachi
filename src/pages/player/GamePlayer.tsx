@@ -13,6 +13,108 @@ const languageOptions: Array<{ code: QuestionLanguage; flag: string; label: stri
   { code: 'EN', flag: '🇬🇧', label: 'EN' },
 ];
 
+const playerCopy: Record<QuestionLanguage, {
+  language: string;
+  question: string;
+  answerPlaceholder: string;
+  submitAnswers: string;
+  sending: string;
+  fillAll: string;
+  sentWaitingReveal: string;
+  waitHost: string;
+  answersSent: string;
+  waitRemoteStart: string;
+  sessionClosed: string;
+  backHome: string;
+  connecting: string;
+  guessTitle: string;
+  votingClosed: string;
+  wait: string;
+  confirmChoice: string;
+  cancel: string;
+  confirm: string;
+  voteSending: string;
+  voteError: string;
+  voteResult: string;
+  noVotes: string;
+}> = {
+  IT: {
+    language: 'LINGUA',
+    question: 'DOMANDA',
+    answerPlaceholder: 'Scrivi la tua risposta',
+    submitAnswers: 'Invia risposte',
+    sending: 'Invio...',
+    fillAll: 'Compila tutte le risposte',
+    sentWaitingReveal: 'Risposte gia inviate. Aspetta il reveal.',
+    waitHost: 'Aspetta che l\'host apra la raccolta oppure avvii la sessione.',
+    answersSent: 'Risposte inviate.',
+    waitRemoteStart: 'Aspetta che dal telecomando parta la sessione.',
+    sessionClosed: 'La sessione e stata chiusa.',
+    backHome: 'Torna alla home',
+    connecting: 'Connessione alla sessione...',
+    guessTitle: 'Chi e?',
+    votingClosed: 'Votazione chiusa',
+    wait: 'Attendi',
+    confirmChoice: 'Confermi questa scelta?',
+    cancel: 'Annulla',
+    confirm: 'Conferma',
+    voteSending: 'Invio...',
+    voteError: 'Voto non registrato',
+    voteResult: 'Risultato votazione',
+    noVotes: 'Nessun voto ricevuto',
+  },
+  EN: {
+    language: 'LANGUAGE',
+    question: 'QUESTION',
+    answerPlaceholder: 'Your answer',
+    submitAnswers: 'Submit answers',
+    sending: 'Sending...',
+    fillAll: 'Fill in all answers',
+    sentWaitingReveal: 'Answers already sent. Wait for the reveal.',
+    waitHost: 'Wait for the host to open answer collection or start the session.',
+    answersSent: 'Answers sent.',
+    waitRemoteStart: 'Wait for the session to start from the remote.',
+    sessionClosed: 'The session has been closed.',
+    backHome: 'Back home',
+    connecting: 'Connecting to session...',
+    guessTitle: 'Who is it?',
+    votingClosed: 'Voting closed',
+    wait: 'Wait',
+    confirmChoice: 'Confirm this choice?',
+    cancel: 'Cancel',
+    confirm: 'Confirm',
+    voteSending: 'Sending...',
+    voteError: 'Vote not registered',
+    voteResult: 'Voting result',
+    noVotes: 'No votes received',
+  },
+  SV: {
+    language: 'SPRÅK',
+    question: 'FRÅGA',
+    answerPlaceholder: 'Ditt svar',
+    submitAnswers: 'Skicka svar',
+    sending: 'Skickar...',
+    fillAll: 'Fyll i alla svar',
+    sentWaitingReveal: 'Svar redan skickade. Vanta pa avslöjandet.',
+    waitHost: 'Vänta tills värden öppnar insamlingen eller startar sessionen.',
+    answersSent: 'Svar skickade.',
+    waitRemoteStart: 'Vänta tills sessionen startas från fjärrkontrollen.',
+    sessionClosed: 'Sessionen har stängts.',
+    backHome: 'Till startsidan',
+    connecting: 'Ansluter till sessionen...',
+    guessTitle: 'Vem är det?',
+    votingClosed: 'Omröstningen stängd',
+    wait: 'Vanta',
+    confirmChoice: 'Bekräfta detta val?',
+    cancel: 'Avbryt',
+    confirm: 'Bekräfta',
+    voteSending: 'Skickar...',
+    voteError: 'Rösten registrerades inte',
+    voteResult: 'Omröstningsresultat',
+    noVotes: 'Inga röster mottagna',
+  },
+};
+
 function initialQuestionLanguage(): QuestionLanguage {
   const saved = window.localStorage.getItem('indovinachi-question-language');
   if (saved === 'IT' || saved === 'SV' || saved === 'EN') return saved;
@@ -23,7 +125,7 @@ function initialQuestionLanguage(): QuestionLanguage {
   return 'IT';
 }
 
-function GuessResultsModal({ session }: { session: PublicSessionView }) {
+function GuessResultsModal({ session, copy }: { session: PublicSessionView; copy: (typeof playerCopy)[QuestionLanguage] }) {
   return (
     <div className="fixed inset-0 bg-black/65 flex items-center justify-center p-5 z-40">
       <motion.div
@@ -31,22 +133,22 @@ function GuessResultsModal({ session }: { session: PublicSessionView }) {
         animate={{ y: 0, opacity: 1, scale: 1 }}
         className="bg-white rounded-3xl shadow-2xl p-5 w-full max-w-lg max-h-[84dvh] overflow-y-auto"
       >
-        <h3 className="text-gray-900 font-black text-2xl text-center mb-4">Risultato votazione</h3>
+        <h3 className="text-gray-900 font-black text-2xl text-center mb-4">{copy.voteResult}</h3>
         <div className="flex flex-col gap-3">
           {session.currentGuessSummary.length === 0 ? (
-            <p className="text-gray-500 font-bold text-center py-4">Nessun voto ricevuto</p>
+            <p className="text-gray-500 font-bold text-center py-4">{copy.noVotes}</p>
           ) : session.currentGuessSummary.map((entry) => (
             <div key={entry.playerId} className="grid grid-cols-[1fr_auto] items-center gap-3">
               <div className="min-w-0">
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <span className="text-gray-900 font-black text-[1.3rem] leading-tight truncate">{entry.avatar} {entry.nickname}</span>
-                  <span className="text-purple-700 font-black text-[1.3rem] leading-tight">{entry.percentage}%</span>
+                  <span className="text-blue-700 font-black text-[1.3rem] leading-tight">{entry.percentage}%</span>
                 </div>
-                <div className="h-3 bg-purple-100 rounded-full overflow-hidden">
+                <div className="h-3 bg-blue-100 rounded-full overflow-hidden">
                   <div className="h-full bg-yellow-400 rounded-full" style={{ width: `${Math.min(100, entry.percentage)}%` }} />
                 </div>
               </div>
-              <span className="bg-purple-50 text-purple-700 font-black rounded-xl px-3 py-2">{entry.voteCount}</span>
+              <span className="bg-blue-50 text-blue-700 font-black rounded-xl px-3 py-2">{entry.voteCount}</span>
             </div>
           ))}
         </div>
@@ -83,6 +185,7 @@ export default function GamePlayer() {
   const [questionLanguage, setQuestionLanguage] = useState<QuestionLanguage>(initialQuestionLanguage);
   const [selectedGuessId, setSelectedGuessId] = useState('');
   const [confirmedGuessId, setConfirmedGuessId] = useState('');
+  const copy = playerCopy[questionLanguage];
 
   function handleLanguageChange(nextLanguage: QuestionLanguage) {
     setQuestionLanguage(nextLanguage);
@@ -157,7 +260,7 @@ export default function GamePlayer() {
     if (!session || !player) return;
 
     if (normalizedAnswers.some((answer) => !answer.trim())) {
-      setError('Compila tutte le risposte');
+      setError(copy.fillAll);
       return;
     }
 
@@ -183,7 +286,7 @@ export default function GamePlayer() {
       if (result.session) setSession(result.session);
       setSelectedGuessId('');
     } catch (guessError) {
-      setError(guessError instanceof Error ? guessError.message : 'Voto non registrato');
+      setError(guessError instanceof Error ? guessError.message : copy.voteError);
     } finally {
       setSubmittingGuess(false);
     }
@@ -193,7 +296,7 @@ export default function GamePlayer() {
     return (
       <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-6 p-6">
         <IceBreakerLogo className="text-[2.73rem]" />
-        <p className="text-light text-base">{error || 'Connessione alla sessione...'}</p>
+        <p className="text-light text-base">{error || copy.connecting}</p>
       </div>
     );
   }
@@ -203,8 +306,8 @@ export default function GamePlayer() {
     return (
       <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-6 p-6">
         <IceBreakerLogo className="text-[2.73rem]" />
-        <p className="text-light text-base">La sessione e stata chiusa.</p>
-        <button onClick={() => nav('/play')} className="btn-white">Torna alla home</button>
+        <p className="text-light text-base">{copy.sessionClosed}</p>
+        <button onClick={() => nav('/play')} className="btn-white">{copy.backHome}</button>
       </div>
     );
   }
@@ -218,10 +321,10 @@ export default function GamePlayer() {
         </motion.div>
         <div className="text-center">
           <h2 className="text-white font-black text-3xl">{player.nickname}</h2>
-          <p className="text-light mt-1">{player.submitted ? 'Risposte gia inviate. Aspetta il reveal.' : 'Aspetta che l\'host apra la raccolta oppure avvii la sessione.'}</p>
+          <p className="text-light mt-1">{player.submitted ? copy.sentWaitingReveal : copy.waitHost}</p>
         </div>
         <div className="bg-white/10 rounded-2xl px-8 py-3 text-center">
-          <span className="text-purple-300 font-bold">Codice </span>
+          <span className="text-blue-300 font-bold">Codice </span>
           <span className="text-white font-black tracking-widest text-xl">{session.code}</span>
         </div>
       </div>
@@ -233,20 +336,20 @@ export default function GamePlayer() {
       <div className="min-h-screen app-bg flex flex-col gap-4 p-4">
         <div className="text-center pt-2">
           <IceBreakerLogo className="text-[2.3rem]" />
-          <p className="text-purple-300 font-semibold mt-2">{player.avatar} {player.nickname}</p>
+          <p className="text-blue-300 font-semibold mt-2">{player.avatar} {player.nickname}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex flex-col gap-3">
           <div className="bg-white rounded-3xl shadow-xl p-5 overflow-y-auto flex-1 flex flex-col gap-4">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-xs font-black tracking-widest text-purple-500">LINGUA</span>
-              <div className="flex items-center gap-2 rounded-full bg-purple-50 p-1">
+              <span className="text-xs font-black tracking-widest text-blue-500">{copy.language}</span>
+              <div className="flex items-center gap-2 rounded-full bg-blue-50 p-1">
                 {languageOptions.map((option) => (
                   <button
                     key={option.code}
                     type="button"
                     onClick={() => handleLanguageChange(option.code)}
-                    className={`h-10 min-w-[74px] rounded-full px-3 text-sm font-black transition-colors ${questionLanguage === option.code ? 'bg-purple-700 text-white shadow' : 'bg-white text-purple-700'}`}
+                    className={`h-10 min-w-[74px] rounded-full px-3 text-sm font-black transition-colors ${questionLanguage === option.code ? 'bg-blue-700 text-white shadow' : 'bg-white text-blue-700'}`}
                     aria-pressed={questionLanguage === option.code}
                   >
                     <span className="mr-1" aria-hidden="true">{option.flag}</span>
@@ -258,13 +361,13 @@ export default function GamePlayer() {
 
             {playerQuestions.map((question, index) => (
               <label key={`${session.code}-${question.id}-${index}`} className="block">
-                <span className="block text-xs font-black tracking-widest text-purple-500 mb-2">DOMANDA {index + 1}</span>
+                <span className="block text-xs font-black tracking-widest text-blue-500 mb-2">{copy.question} {index + 1}</span>
                 <strong className="block text-gray-800 text-xl font-black mb-3">{resolveQuestionText(question, questionLanguage)}</strong>
                 <textarea
                   value={answers[index] || ''}
                   onChange={(event) => setAnswers((current) => ({ ...current, [index]: event.target.value }))}
                   className="input-field min-h-[96px]"
-                  placeholder="Scrivi la tua risposta"
+                  placeholder={copy.answerPlaceholder}
                 />
               </label>
             ))}
@@ -273,7 +376,7 @@ export default function GamePlayer() {
           {error ? <div className="bg-red-500 text-white font-bold text-center py-3 rounded-xl text-sm">{error}</div> : null}
 
           <button type="submit" disabled={submitting} className="btn-white text-2xl py-4 disabled:opacity-40">
-            {submitting ? 'Invio...' : 'Invia risposte'}
+            {submitting ? copy.sending : copy.submitAnswers}
           </button>
         </form>
       </div>
@@ -289,7 +392,7 @@ export default function GamePlayer() {
         </motion.div>
         <div className="text-center">
           <h2 className="text-white font-black text-3xl">{player.nickname}</h2>
-          <p className="text-light mt-1">Risposte inviate. Aspetta che dal telecomando parta la sessione.</p>
+          <p className="text-light mt-1">{copy.answersSent} {copy.waitRemoteStart}</p>
         </div>
       </div>
     );
@@ -317,7 +420,7 @@ export default function GamePlayer() {
         {votingOpen ? (
           <div className="w-full max-w-lg">
             <div className="flex items-center justify-between gap-3 mb-3">
-              <h2 className="text-white font-black text-2xl">Chi e?</h2>
+              <h2 className="text-white font-black text-2xl">{copy.guessTitle}</h2>
             </div>
             <div className="grid grid-cols-2 gap-2">
               {session.players.map((entry) => (
@@ -336,7 +439,7 @@ export default function GamePlayer() {
           </div>
         ) : showGuessResults ? null : (
           <div className="w-full max-w-lg bg-white/10 rounded-2xl px-5 py-4 text-center">
-            <p className="text-white font-black">{session.revealPhase === 'answer' ? 'Votazione chiusa' : 'Attendi'}</p>
+            <p className="text-white font-black">{session.revealPhase === 'answer' ? copy.votingClosed : copy.wait}</p>
           </div>
         )}
 
@@ -347,13 +450,13 @@ export default function GamePlayer() {
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl">
               <div className="text-6xl mb-3">{selectedGuess.avatar}</div>
               <h3 className="text-gray-900 font-black text-2xl mb-2">{selectedGuess.nickname}</h3>
-              <p className="text-gray-500 font-semibold mb-5">Confermi questa scelta?</p>
+              <p className="text-gray-500 font-semibold mb-5">{copy.confirmChoice}</p>
               <div className="grid grid-cols-2 gap-3">
                 <button type="button" onClick={() => setSelectedGuessId('')} disabled={submittingGuess} className="rounded-2xl bg-gray-100 text-gray-700 font-black py-4">
-                  Annulla
+                  {copy.cancel}
                 </button>
                 <button type="button" onClick={() => void handleConfirmGuess()} disabled={submittingGuess} className="btn-purple py-4">
-                  {submittingGuess ? 'Invio...' : 'Conferma'}
+                  {submittingGuess ? copy.voteSending : copy.confirm}
                 </button>
               </div>
             </motion.div>
@@ -363,7 +466,7 @@ export default function GamePlayer() {
         {confirmedGuess && !showGuessResults && !selectedGuess ? (
           <ConfirmedGuessModal player={confirmedGuess} />
         ) : null}
-        {showGuessResults ? <GuessResultsModal session={session} /> : null}
+        {showGuessResults ? <GuessResultsModal session={session} copy={copy} /> : null}
       </div>
     );
   }

@@ -81,7 +81,7 @@ export default function Nickname() {
     <div className="h-screen app-bg flex flex-col overflow-hidden">
       <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="shrink-0 text-center pt-4 pb-1 px-4 relative">
         <IceBreakerLogo className="text-[2.52rem] mb-2" />
-        <div className="text-purple-300 font-bold tracking-widest mb-1" style={{ fontSize: '1.04rem' }}>CODICE: {code}</div>
+        <div className="text-blue-300 font-bold tracking-widest mb-1" style={{ fontSize: '1.04rem' }}>CODICE: {code}</div>
         <h2 className="text-white font-black" style={{ fontSize: '1.78rem' }}>Scegli avatar e nickname</h2>
       </motion.div>
 
@@ -112,7 +112,7 @@ export default function Nickname() {
 
       {preview ? (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setPreview(null)}>
-          <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 25 }} className="relative bg-purple-800 rounded-3xl p-10 flex flex-col items-center gap-6 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+          <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 25 }} className="relative bg-blue-800 rounded-3xl p-10 flex flex-col items-center gap-6 shadow-2xl" onClick={(event) => event.stopPropagation()}>
             <button type="button" onClick={() => setPreview(null)} className="absolute top-3 right-3 text-white/70 hover:text-white text-2xl font-black leading-none w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/20 transition-all">✕</button>
             <div className="text-9xl leading-none select-none">{preview}</div>
             <button type="button" onClick={() => { setAvatar(preview); setPreview(null); }} className="btn-white text-lg px-8 py-3">Usa questo avatar</button>

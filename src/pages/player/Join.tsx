@@ -48,7 +48,7 @@ export default function Join() {
     <div className="h-screen app-bg flex flex-col items-center justify-center p-6 gap-6 overflow-hidden">
       <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 220 }} className="text-center">
         <IceBreakerLogo className="text-6xl" />
-        <p className="text-purple-300 font-semibold mt-1">Entra con il codice mostrato sul maxischermo</p>
+        <p className="text-blue-300 font-semibold mt-1">Entra con il codice mostrato sul maxischermo</p>
       </motion.div>
 
       <motion.form initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }} onSubmit={join} className="w-full max-w-xs flex flex-col gap-4">
@@ -67,7 +67,7 @@ export default function Join() {
           {loading ? '…' : 'Entra'}
         </button>
 
-        <button type="button" onClick={() => nav('/')} className="text-purple-400 hover:text-white font-semibold text-sm text-center transition-colors mt-2">
+        <button type="button" onClick={() => nav('/')} className="text-blue-400 hover:text-white font-semibold text-sm text-center transition-colors mt-2">
           ← Torna alla home
         </button>
       </motion.form>

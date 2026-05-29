@@ -21,6 +21,8 @@ const CENTRAL_AUTH_PB_ADMIN_EMAIL = process.env.CENTRAL_AUTH_PB_ADMIN_EMAIL || P
 const CENTRAL_AUTH_PB_ADMIN_PASSWORD = process.env.CENTRAL_AUTH_PB_ADMIN_PASSWORD || PB_ADMIN_PASSWORD;
 const APP_ACCESS_SLUG = process.env.APP_ACCESS_SLUG || 'indovinachi';
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'asi.vong@gmail.com').toLowerCase();
+const LIBRETRANSLATE_URL = process.env.LIBRETRANSLATE_URL || '';
+const LIBRETRANSLATE_API_KEY = process.env.LIBRETRANSLATE_API_KEY || '';
 
 const SESSION_COLLECTION = 'icebreaker_sessions';
 const PLAYER_COLLECTION = 'icebreaker_players';
@@ -208,6 +210,50 @@ function resolveQuestionTextServer(question, preferredLanguage) {
   if (preferredLanguage === 'SV') return question.SV || question.EN || question.IT || '';
   if (preferredLanguage === 'EN') return question.EN || question.IT || question.SV || '';
   return question.IT || question.EN || question.SV || '';
+}
+
+function responseView(entry) {
+  return {
+    id: entry.id,
+    sessionCode: entry.sessionCode || '',
+    playerId: entry.playerId || '',
+    playerNickname: entry.playerNickname || '',
+    playerAvatar: entry.playerAvatar || '',
+    questionId: entry.questionId || '',
+    questionIndex: typeof entry.questionIndex === 'number' ? entry.questionIndex : 0,
+    questionText: entry.questionText || '',
+    answerText: entry.answerText || '',
+    submittedAt: entry.submittedAt || '',
+    created: entry.created || '',
+    updated: entry.updated || '',
+  };
+}
+
+async function translateAnswerToItalian(text, language) {
+  const source = String(language || '').toLowerCase();
+  if (!text || source === 'it' || source === 'italian') return text;
+  if (!['en', 'sv'].includes(source)) return text;
+  if (!LIBRETRANSLATE_URL) return text;
+
+  try {
+    const response = await fetch(`${LIBRETRANSLATE_URL.replace(/\/$/, '')}/translate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        q: text,
+        source,
+        target: 'it',
+        format: 'text',
+        ...(LIBRETRANSLATE_API_KEY ? { api_key: LIBRETRANSLATE_API_KEY } : {}),
+      }),
+    });
+    if (!response.ok) throw new Error(`Translate failed: ${response.status}`);
+    const payload = await response.json().catch(() => ({}));
+    return String(payload.translatedText || text).trim() || text;
+  } catch (error) {
+    console.error('[translateAnswerToItalian]', error);
+    return text;
+  }
 }
 
 function isSessionActive(status) {
@@ -816,6 +862,56 @@ app.get('/api/host/sessions', requireAuthorizedHost, async (req, res) => {
   }
 });
 
+app.get('/api/sessions/:code/responses', requireAuthorizedHost, requireOwnedSession, async (req, res) => {
+  try {
+    const responses = await getResponsesByCode(req.pocketBase, req.sessionRecord.code);
+    res.json({ responses: responses.map(responseView) });
+  } catch (error) {
+    console.error('[sessionResponses]', error);
+    res.status(500).json({ error: 'Impossibile caricare le risposte' });
+  }
+});
+
+app.patch('/api/sessions/:code/responses/:responseId', requireAuthorizedHost, requireOwnedSession, async (req, res) => {
+  try {
+    const answerText = String(req.body?.answerText || '').trim();
+    if (!answerText) {
+      return res.status(400).json({ error: 'La risposta non puo essere vuota' });
+    }
+
+    const existing = await req.pocketBase.collection(RESPONSE_COLLECTION).getOne(req.params.responseId);
+    if (existing.sessionCode !== req.sessionRecord.code || String(existing.questionId || '').startsWith('__guess__:')) {
+      return res.status(404).json({ error: 'Risposta non trovata per questa sessione' });
+    }
+
+    const updated = await req.pocketBase.collection(RESPONSE_COLLECTION).update(existing.id, {
+      answerText: answerText.slice(0, 1000),
+    });
+
+    if (Array.isArray(req.sessionRecord.revealQueue) && req.sessionRecord.revealQueue.length > 0) {
+      const revealQueue = JSON.parse(JSON.stringify(req.sessionRecord.revealQueue));
+      let changed = false;
+      for (const item of revealQueue) {
+        if (!Array.isArray(item.answers)) continue;
+        for (const answer of item.answers) {
+          if (answer.playerId === existing.playerId && answer.text === existing.answerText) {
+            answer.text = updated.answerText;
+            changed = true;
+          }
+        }
+      }
+      if (changed) {
+        await req.pocketBase.collection(SESSION_COLLECTION).update(req.sessionRecord.id, { revealQueue });
+      }
+    }
+
+    res.json({ response: responseView(updated) });
+  } catch (error) {
+    console.error('[updateSessionResponse]', error);
+    res.status(500).json({ error: 'Impossibile aggiornare la risposta' });
+  }
+});
+
 app.post('/api/sessions', requireAuthorizedHost, async (req, res) => {
   try {
     const pocketBase = await authenticatePocketBase();
@@ -953,8 +1049,9 @@ app.post('/api/sessions/:code/players/:playerId/responses', async (req, res) => 
     await Promise.all(existing.map((entry) => pocketBase.collection(RESPONSE_COLLECTION).delete(entry.id)));
 
     const submittedAt = new Date().toISOString();
-    await Promise.all(answers.map((answer, index) => {
+    await Promise.all(answers.map(async (answer, index) => {
       const question = questions[index];
+      const answerText = await translateAnswerToItalian(answer, language);
       return pocketBase.collection(RESPONSE_COLLECTION).create({
         sessionCode: session.code,
         playerId: player.id,
@@ -962,8 +1059,8 @@ app.post('/api/sessions/:code/players/:playerId/responses', async (req, res) => 
         playerAvatar: player.avatar,
         questionId: question?.id || `legacy-${index}`,
         questionIndex: index + 1,
-        questionText: resolveQuestionTextServer(question, language),
-        answerText: answer,
+        questionText: resolveQuestionTextServer(question, 'IT'),
+        answerText,
         submittedAt,
       });
     }));

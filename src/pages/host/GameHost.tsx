@@ -38,13 +38,13 @@ function GuessResultsModal({ session }: { session: PublicSessionView }) {
               <div className="min-w-0">
                 <div className="flex items-center justify-between gap-3 mb-1">
                   <span className="text-gray-900 font-black text-[1.625rem] leading-tight truncate">{entry.avatar} {entry.nickname}</span>
-                  <span className="text-purple-700 font-black text-[1.625rem] leading-tight">{entry.percentage}%</span>
+                  <span className="text-blue-700 font-black text-[1.625rem] leading-tight">{entry.percentage}%</span>
                 </div>
-                <div className="h-4 bg-purple-100 rounded-full overflow-hidden">
+                <div className="h-4 bg-blue-100 rounded-full overflow-hidden">
                   <div className="h-full bg-yellow-400 rounded-full" style={{ width: `${Math.min(100, entry.percentage)}%` }} />
                 </div>
               </div>
-              <span className="bg-purple-50 text-purple-700 font-black rounded-xl px-3 py-2">{entry.voteCount}</span>
+              <span className="bg-blue-50 text-blue-700 font-black rounded-xl px-3 py-2">{entry.voteCount}</span>
             </div>
           ))}
         </div>
@@ -151,7 +151,7 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
           </button>
         ) : null}
         <IceBreakerLogo className="text-[3.53rem]" />
-        <p className="text-purple-300 font-bold text-2xl">{session.title}</p>
+        <p className="text-blue-300 font-bold text-2xl">{session.title}</p>
 
         <motion.div
           key={`question-${session.currentQuestionIndex}-${session.currentQuestionText}`}
@@ -201,7 +201,7 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
             animate={{ scale: 1, opacity: 1 }}
             className="bg-white/10 border border-white/20 rounded-3xl px-12 py-8 text-center"
           >
-            <p className="text-purple-200 font-black tracking-widest text-sm mb-2">TEMPO PER INDOVINARE</p>
+            <p className="text-blue-200 font-black tracking-widest text-sm mb-2">TEMPO PER INDOVINARE</p>
             <motion.div
               key={countdownRemaining}
               initial={{ scale: 0.7 }}
@@ -216,13 +216,13 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
 
         {showVotingOpen ? (
           <div className="bg-white/10 border border-white/20 rounded-3xl px-10 py-6 text-center">
-            <p className="text-purple-200 font-black tracking-widest text-sm">VOTAZIONE APERTA</p>
+            <p className="text-blue-200 font-black tracking-widest text-sm">VOTAZIONE APERTA</p>
           </div>
         ) : null}
 
         {showGuessResults ? <GuessResultsModal session={session} /> : null}
 
-        <div className="fixed bottom-4 right-4 bg-purple-800 text-white text-sm font-bold px-4 py-2 rounded-xl shadow-lg z-50">
+        <div className="fixed bottom-4 right-4 bg-blue-800 text-white text-sm font-bold px-4 py-2 rounded-xl shadow-lg z-50">
           {session.title} - CODICE: {session.code}
         </div>
       </div>
@@ -240,7 +240,7 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
         <div className="text-center">
           <div className="text-7xl mb-4">🎉</div>
           <h1 className="text-white font-black text-4xl">Sessione completata</h1>
-          <p className="text-purple-300 mt-3 text-xl font-semibold">Grazie per aver giocato a IceBreaker.</p>
+          <p className="text-blue-300 mt-3 text-xl font-semibold">Grazie per aver giocato a IceBreaker.</p>
         </div>
         <button onClick={() => nav('/host')} className="btn-white text-xl px-10 py-4">Torna alla regia</button>
       </div>
@@ -262,14 +262,14 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
 
       <div className="text-center w-full max-w-lg">
         <div className="text-5xl font-black text-white">{session.playerCount}</div>
-        <div className="text-purple-300 font-semibold mb-4">{session.playerCount === 1 ? 'giocatore in sala' : 'giocatori in sala'}</div>
+        <div className="text-blue-300 font-semibold mb-4">{session.playerCount === 1 ? 'giocatore in sala' : 'giocatori in sala'}</div>
       </div>
 
       <div className="flex gap-3 w-full max-w-2xl items-stretch flex-col md:flex-row">
         <div className="card text-center flex flex-col justify-center" style={{ minHeight: '22rem', aspectRatio: '1 / 1' }}>
           <p className="text-gray-400 font-bold text-sm tracking-widest mb-1">USA QUESTO LINK</p>
-          <p className="text-purple-700 font-black text-[0.9625rem]">{window.location.origin}/play</p>
-          <div className="font-black text-purple-900 tracking-[0.15em] mb-1 text-[2.4rem]">{session.code}</div>
+          <p className="text-blue-700 font-black text-[0.9625rem]">{window.location.origin}/play</p>
+          <div className="font-black text-blue-900 tracking-[0.15em] mb-1 text-[2.4rem]">{session.code}</div>
           <QRCodeSVG value={joinUrl(session)} size={210} className="mx-auto" includeMargin />
           <p className="text-gray-400 text-xs font-semibold mt-2">scansiona per entrare</p>
         </div>

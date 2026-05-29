@@ -66,7 +66,7 @@ export default function Home() {
         className="text-center"
       >
         <IceBreakerLogo className="text-7xl" />
-        <p className="text-purple-300 text-xl font-semibold mt-2">Party game per scoprire chi ha scritto cosa</p>
+        <p className="text-blue-300 text-xl font-semibold mt-2">Party game per scoprire chi ha scritto cosa</p>
       </motion.div>
 
       <motion.div
@@ -77,7 +77,7 @@ export default function Home() {
       >
         <button
           onClick={() => nav('/play')}
-          className="w-full py-6 bg-white text-purple-900 font-black text-2xl rounded-2xl shadow-xl hover:bg-purple-50 active:scale-95 transition-all"
+          className="w-full py-6 bg-white text-blue-900 font-black text-2xl rounded-2xl shadow-xl hover:bg-blue-50 active:scale-95 transition-all"
         >
           Entra nel gioco
         </button>
@@ -93,7 +93,7 @@ export default function Home() {
         </button>
       </motion.div>
 
-      <p className="text-purple-300 text-sm font-semibold absolute bottom-6">The Party game room</p>
+      <p className="text-blue-300 text-sm font-semibold absolute bottom-6">The Party game room</p>
 
       {loginOpen ? (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setLoginOpen(false)}>
@@ -113,7 +113,7 @@ export default function Home() {
             ) : null}
 
             {requestMessage ? (
-              <div className="bg-purple-50 border border-purple-200 text-purple-700 rounded-xl p-3 mb-4 text-sm font-semibold">
+              <div className="bg-blue-50 border border-blue-200 text-blue-700 rounded-xl p-3 mb-4 text-sm font-semibold">
                 {requestMessage}
               </div>
             ) : null}
@@ -123,7 +123,7 @@ export default function Home() {
                 {loginLoading ? 'Controllo accesso...' : 'Accedi con Google'}
               </button>
               {auth.currentUser && loginError ? (
-                <button type="button" disabled={requesting} onClick={() => void requestAccess()} className="py-3 bg-gray-100 text-purple-700 font-black rounded-xl hover:bg-purple-100 active:scale-95 transition-all disabled:opacity-50">
+                <button type="button" disabled={requesting} onClick={() => void requestAccess()} className="py-3 bg-gray-100 text-blue-700 font-black rounded-xl hover:bg-blue-100 active:scale-95 transition-all disabled:opacity-50">
                   {requesting ? 'Invio...' : 'Richiedi accesso'}
                 </button>
               ) : null}

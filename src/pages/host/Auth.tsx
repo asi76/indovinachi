@@ -60,7 +60,7 @@ export default function HostAuth() {
     <div className="min-h-screen app-bg flex flex-col items-center justify-center p-4 gap-6">
       <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-center">
         <IceBreakerLogo className="text-4xl" />
-        <p className="text-purple-300 mt-1">Portale host</p>
+        <p className="text-blue-300 mt-1">Portale host</p>
       </motion.div>
 
       <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="card w-full max-w-md">
@@ -68,14 +68,14 @@ export default function HostAuth() {
         <p className="text-gray-500 text-sm font-semibold mb-6">Gestisci sessione, QR, telecomando e schermo grande.</p>
 
         {error ? <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl p-3 mb-4 text-sm font-semibold">{error}</div> : null}
-        {requestMessage ? <div className="bg-purple-50 border border-purple-200 text-purple-700 rounded-xl p-3 mb-4 text-sm font-semibold">{requestMessage}</div> : null}
+        {requestMessage ? <div className="bg-blue-50 border border-blue-200 text-blue-700 rounded-xl p-3 mb-4 text-sm font-semibold">{requestMessage}</div> : null}
 
         <div className="flex flex-col gap-3">
           <button type="button" disabled={loading} onClick={() => void login()} className="btn-purple py-4 text-lg disabled:opacity-50">
             {loading ? 'Controllo accesso...' : 'Accedi con Google'}
           </button>
           {auth.currentUser && error ? (
-            <button type="button" disabled={requesting} onClick={() => void requestAccess()} className="py-3 bg-gray-100 text-purple-700 font-black rounded-xl hover:bg-purple-100 active:scale-95 transition-all disabled:opacity-50">
+            <button type="button" disabled={requesting} onClick={() => void requestAccess()} className="py-3 bg-gray-100 text-blue-700 font-black rounded-xl hover:bg-blue-100 active:scale-95 transition-all disabled:opacity-50">
               {requesting ? 'Invio...' : 'Richiedi accesso'}
             </button>
           ) : null}
@@ -87,7 +87,7 @@ export default function HostAuth() {
         </div>
       </motion.div>
 
-      <button onClick={() => nav('/')} className="text-purple-400 hover:text-white font-semibold text-sm transition-colors">← Torna alla home</button>
+      <button onClick={() => nav('/')} className="text-blue-400 hover:text-white font-semibold text-sm transition-colors">← Torna alla home</button>
     </div>
   );
 }

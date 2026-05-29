@@ -155,7 +155,7 @@ export default function QuestionsAdmin() {
           </Link>
           <div className="flex items-center gap-3">
             <Link to="/host" className="btn-white py-2 px-4">Dashboard</Link>
-            <button onClick={() => void signOutFromGoogle().then(() => window.location.reload())} className="text-purple-300 hover:text-white text-sm font-bold transition-colors">
+            <button onClick={() => void signOutFromGoogle().then(() => window.location.reload())} className="text-blue-300 hover:text-white text-sm font-bold transition-colors">
               Logout
             </button>
           </div>
@@ -187,7 +187,7 @@ export default function QuestionsAdmin() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
               <div>
                 <h2 className="text-2xl font-black text-gray-800">Database</h2>
-                <p className="text-sm font-black text-purple-700">{questions.length} domande attive</p>
+                <p className="text-sm font-black text-blue-700">{questions.length} domande attive</p>
               </div>
               <input
                 className="input-field sm:max-w-[280px]"
@@ -199,7 +199,7 @@ export default function QuestionsAdmin() {
 
             <div className="overflow-x-auto rounded-2xl border border-gray-100">
               <table className="w-full min-w-[760px] border-collapse bg-white">
-                <thead className="bg-purple-50 text-left text-xs font-black tracking-widest text-purple-700">
+                <thead className="bg-blue-50 text-left text-xs font-black tracking-widest text-blue-700">
                   <tr>
                     <th className="px-4 py-3 w-[33%]">IT</th>
                     <th className="px-4 py-3 w-[33%]">EN</th>

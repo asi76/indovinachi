@@ -85,6 +85,21 @@ export interface IcebreakerPlayerRecord {
   updated?: string;
 }
 
+export interface IcebreakerResponseRecord {
+  id: string;
+  sessionCode: string;
+  playerId: string;
+  playerNickname: string;
+  playerAvatar: string;
+  questionId?: string;
+  questionIndex: number;
+  questionText: string;
+  answerText: string;
+  submittedAt: string;
+  created?: string;
+  updated?: string;
+}
+
 export interface AuthSession {
   user: {
     email: string;

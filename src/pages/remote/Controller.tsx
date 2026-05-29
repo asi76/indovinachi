@@ -82,18 +82,18 @@ export default function RemoteController({ sessionCode, token }: { sessionCode: 
       <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="card w-full max-w-md">
         <div className="text-center mb-6">
           <IceBreakerLogo className="text-4xl" />
-          <p className="text-purple-500 font-black tracking-[0.3em] mt-2">{session.code}</p>
+          <p className="text-blue-500 font-black tracking-[0.3em] mt-2">{session.code}</p>
           <p className="text-gray-500 font-semibold mt-3">Inizia sessione prepara il reveal. Poi usa Prossima domanda, Mostra risposta e Mostra giocatore.</p>
         </div>
 
         <div className="grid grid-cols-2 gap-3 mb-5">
-          <div className="bg-purple-50 rounded-2xl p-4 text-center">
+          <div className="bg-blue-50 rounded-2xl p-4 text-center">
             <div className="text-3xl font-black text-gray-900">{session.playerCount}</div>
-            <div className="text-xs font-black text-purple-500 tracking-widest">GIOCATORI</div>
+            <div className="text-xs font-black text-blue-500 tracking-widest">GIOCATORI</div>
           </div>
-          <div className="bg-purple-50 rounded-2xl p-4 text-center">
+          <div className="bg-blue-50 rounded-2xl p-4 text-center">
             <div className="text-3xl font-black text-gray-900">{session.answeredCount}</div>
-            <div className="text-xs font-black text-purple-500 tracking-widest">RISPOSTE</div>
+            <div className="text-xs font-black text-blue-500 tracking-widest">RISPOSTE</div>
           </div>
         </div>
 
@@ -126,7 +126,7 @@ export default function RemoteController({ sessionCode, token }: { sessionCode: 
           <strong className="block text-gray-900 text-lg">{session.currentQuestionText || 'Nessuna domanda attiva'}</strong>
           <p className="text-gray-500 font-semibold mt-2">{session.currentAnswerText || 'Nessuna risposta ancora mostrata'}</p>
           {session.currentAnswerPlayerVisible && session.currentAnswerPlayer ? (
-            <p className="text-purple-700 font-black mt-2">{session.currentAnswerPlayer.avatar} {session.currentAnswerPlayer.nickname}</p>
+            <p className="text-blue-700 font-black mt-2">{session.currentAnswerPlayer.avatar} {session.currentAnswerPlayer.nickname}</p>
           ) : null}
         </div>
 
