@@ -4,8 +4,8 @@ export default function IceBreakerLogo({ as, className = '' }: { as?: LogoTag; c
   const Tag = as || 'h1';
   return (
     <Tag className={`icebreaker-logo font-black leading-none ${className}`}>
-      <span className="icebreaker-logo-ice">Ice</span>
-      <span className="icebreaker-logo-breaker">Breaker</span>
+      <span className="icebreaker-logo-ice">ICE</span>
+      <span className="icebreaker-logo-breaker">BREAKER</span>
     </Tag>
   );
 }

@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { motion } from 'framer-motion';
 import { signOutFromGoogle } from '../../lib/firebase';
-import { closeHostSession, createHostSession, fetchHostSessions, fetchQuestionBank, fetchSessionResponses, openCollecting, saveHostSessionConfig, startSession, terminateHostSession, updateSessionResponse } from '../../lib/sessionApi';
+import { closeHostSession, createHostSession, fetchHostSessions, fetchQuestionBank, openCollecting, saveHostSessionConfig, startSession, terminateHostSession } from '../../lib/sessionApi';
 import { joinUrl, presenterUrl, remoteUrl, sessionStatusLabel } from '../../lib/game';
-import type { IcebreakerResponseRecord, MultilingualQuestion, PublicSessionView, QuestionMode } from '../../types';
+import type { MultilingualQuestion, PublicSessionView, QuestionMode } from '../../types';
 import IceBreakerLogo from '../../components/IceBreakerLogo';
 
 function parseLines(value: string) {
@@ -23,8 +23,6 @@ export default function HostDashboard() {
   const [questionCountDraft, setQuestionCountDraft] = useState(3);
   const [questionModeDraft, setQuestionModeDraft] = useState<QuestionMode>('direct');
   const [questionBank, setQuestionBank] = useState<MultilingualQuestion[]>([]);
-  const [responses, setResponses] = useState<IcebreakerResponseRecord[]>([]);
-  const [responseDrafts, setResponseDrafts] = useState<Record<string, string>>({});
 
   const session = useMemo(() => sessions[0] || null, [sessions]);
 
@@ -48,37 +46,6 @@ export default function HostDashboard() {
       window.clearInterval(id);
     };
   }, []);
-
-  useEffect(() => {
-    if (!session) {
-      setResponses([]);
-      setResponseDrafts({});
-      return;
-    }
-
-    let active = true;
-    async function loadResponses() {
-      try {
-        const loaded = await fetchSessionResponses(session.code);
-        if (!active) return;
-        setResponses(loaded);
-        setResponseDrafts((current) => {
-          const next: Record<string, string> = {};
-          for (const response of loaded) next[response.id] = current[response.id] ?? response.answerText;
-          return next;
-        });
-      } catch (loadError) {
-        if (active) setError(loadError instanceof Error ? loadError.message : 'Errore caricamento risposte');
-      }
-    }
-
-    void loadResponses();
-    const id = window.setInterval(() => { void loadResponses(); }, 5000);
-    return () => {
-      active = false;
-      window.clearInterval(id);
-    };
-  }, [session?.code]);
 
   useEffect(() => {
     let active = true;
@@ -226,26 +193,6 @@ export default function HostDashboard() {
     }
   }
 
-  async function handleUpdateResponse(responseId: string) {
-    if (!session) return;
-    const answerText = (responseDrafts[responseId] || '').trim();
-    if (!answerText) {
-      setError('La risposta non puo essere vuota');
-      return;
-    }
-    setBusy(`response-${responseId}`);
-    setError('');
-    try {
-      const updated = await updateSessionResponse(session.code, responseId, answerText);
-      setResponses((current) => current.map((response) => (response.id === responseId ? updated : response)));
-      setResponseDrafts((current) => ({ ...current, [responseId]: updated.answerText }));
-    } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : 'Risposta non aggiornata');
-    } finally {
-      setBusy(null);
-    }
-  }
-
   const directQuestionCount = parseLines(questionDraft).length;
   const isCollecting = session?.status === 'collecting' || session?.status === 'ready';
   const isLive = session?.status === 'revealing';
@@ -261,9 +208,17 @@ export default function HostDashboard() {
       <header className="app-bg shadow-lg">
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
           <IceBreakerLogo className="text-[2.1rem]" />
-          <button onClick={() => void signOutFromGoogle().then(() => window.location.reload())} className="text-blue-300 hover:text-white text-sm font-bold transition-colors">
-            Logout
-          </button>
+          <div className="flex items-center gap-4">
+            <button onClick={() => nav('/host/admin/questions')} className="text-blue-300 hover:text-white text-sm font-bold transition-colors">
+              Editor domande
+            </button>
+            <button onClick={() => nav('/host/admin/responses')} className="text-blue-300 hover:text-white text-sm font-bold transition-colors">
+              Editor risposte
+            </button>
+            <button onClick={() => void signOutFromGoogle().then(() => window.location.reload())} className="text-blue-300 hover:text-white text-sm font-bold transition-colors">
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 
@@ -419,6 +374,14 @@ export default function HostDashboard() {
                     <span className="text-xs font-black text-blue-700">Telecomando</span>
                   </a>
                 </div>
+                <div className="mt-4 grid sm:grid-cols-2 gap-3">
+                  <button type="button" onClick={() => nav('/host/admin/questions')} className="btn-white py-3 px-4 text-sm">
+                    Admin domande
+                  </button>
+                  <button type="button" onClick={() => nav('/host/admin/responses')} className="btn-white py-3 px-4 text-sm">
+                    Admin risposte
+                  </button>
+                </div>
               </motion.div>
 
               <div className="card">
@@ -443,43 +406,6 @@ export default function HostDashboard() {
                     <span key={player.id} className="bg-white/80 border border-gray-200 text-gray-800 text-sm px-3 py-1 rounded-full font-semibold shrink-0">
                       {player.avatar} {player.nickname}
                     </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="card">
-                <div className="mb-4">
-                  <h3 className="text-2xl font-black text-gray-800">Risposte giocatori</h3>
-                  <p className="text-sm font-semibold text-gray-500 mt-1">Modifica qui il testo italiano che verra mostrato sul maxischermo.</p>
-                </div>
-                <div className="flex flex-col gap-3 max-h-[34rem] overflow-y-auto pr-1">
-                  {responses.length === 0 ? (
-                    <p className="text-gray-400 font-bold text-center py-6">Nessuna risposta inviata</p>
-                  ) : responses.map((response) => (
-                    <div key={response.id} className="rounded-2xl border border-gray-200 bg-white/80 p-3">
-                      <div className="flex items-center justify-between gap-3 mb-2">
-                        <div className="min-w-0">
-                          <p className="text-xs font-black tracking-widest text-blue-700">DOMANDA {response.questionIndex}</p>
-                          <p className="text-sm font-bold text-gray-500 truncate">{response.questionText}</p>
-                        </div>
-                        <span className="shrink-0 text-sm font-black text-gray-800">{response.playerAvatar} {response.playerNickname}</span>
-                      </div>
-                      <textarea
-                        className="input-field min-h-[82px] text-sm"
-                        value={responseDrafts[response.id] ?? response.answerText}
-                        onChange={(event) => setResponseDrafts((current) => ({ ...current, [response.id]: event.target.value }))}
-                      />
-                      <div className="flex justify-end mt-2">
-                        <button
-                          type="button"
-                          onClick={() => void handleUpdateResponse(response.id)}
-                          disabled={busy === `response-${response.id}` || (responseDrafts[response.id] ?? response.answerText).trim() === response.answerText}
-                          className="btn-purple py-2 px-4 text-sm disabled:opacity-40"
-                        >
-                          {busy === `response-${response.id}` ? 'Salvo...' : 'Salva risposta'}
-                        </button>
-                      </div>
-                    </div>
                   ))}
                 </div>
               </div>

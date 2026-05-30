@@ -8,6 +8,7 @@ import HostAuth from './pages/host/Auth';
 import HostDashboard from './pages/host/Dashboard';
 import GameHost from './pages/host/GameHost';
 import QuestionsAdmin from './pages/host/QuestionsAdmin';
+import ResponsesAdmin from './pages/host/ResponsesAdmin';
 import Join from './pages/player/Join';
 import Nickname from './pages/player/Nickname';
 import GamePlayer from './pages/player/GamePlayer';
@@ -83,6 +84,7 @@ function AppRoutes() {
         <Route path="/host/login" element={<HostAuth />} />
         <Route path="/host" element={<HostGuard><HostDashboard /></HostGuard>} />
         <Route path="/host/admin/questions" element={<HostGuard><QuestionsAdmin /></HostGuard>} />
+        <Route path="/host/admin/responses" element={<HostGuard><ResponsesAdmin /></HostGuard>} />
         <Route path="/host/game/:code" element={<HostGuard><HostGameRoute /></HostGuard>} />
         <Route path="/presenter" element={<PresenterLegacyRoute />} />
         <Route path="/remote/:code" element={<RemoteRoute />} />
