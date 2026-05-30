@@ -279,7 +279,7 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
         <div className="text-center">
           <div className="text-7xl mb-4">🎉</div>
           <h1 className="text-white font-black text-4xl">Sessione completata</h1>
-          <p className="text-blue-300 mt-3 text-xl font-semibold">Grazie per aver giocato a IceBreaker.</p>
+          <p className="text-cyan-50 mt-3 text-xl font-semibold drop-shadow">Grazie per aver giocato a IceBreaker.</p>
         </div>
         <button onClick={() => nav('/host')} className="btn-white text-xl px-10 py-4">Torna alla regia</button>
       </div>
@@ -301,7 +301,7 @@ export default function GameHost({ sessionCode }: { sessionCode?: string }) {
 
       <div className="text-center w-full max-w-lg">
         <div className="text-5xl font-black text-white">{session.playerCount}</div>
-        <div className="text-blue-300 font-semibold mb-4">{session.playerCount === 1 ? 'giocatore in sala' : 'giocatori in sala'}</div>
+        <div className="text-cyan-50 font-semibold mb-4 drop-shadow">{session.playerCount === 1 ? 'giocatore in sala' : 'giocatori in sala'}</div>
       </div>
 
       <div className="flex gap-3 w-full max-w-2xl items-stretch flex-col md:flex-row">

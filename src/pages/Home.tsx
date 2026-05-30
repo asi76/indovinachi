@@ -58,15 +58,15 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-10 p-6">
+    <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-10 p-6 overflow-hidden">
       <motion.div
         initial={{ scale: 0.5, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 200 }}
         className="text-center"
       >
-        <IceBreakerLogo className="text-7xl" />
-        <p className="text-blue-300 text-xl font-semibold mt-2">Party game per scoprire chi ha scritto cosa</p>
+        <IceBreakerLogo className="text-7xl sm:text-8xl" />
+        <p className="text-cyan-50 text-xl font-black mt-3 drop-shadow-lg">Party game per scoprire chi ha scritto cosa</p>
       </motion.div>
 
       <motion.div
@@ -77,7 +77,7 @@ export default function Home() {
       >
         <button
           onClick={() => nav('/play')}
-          className="w-full py-6 bg-white text-blue-900 font-black text-2xl rounded-2xl shadow-xl hover:bg-blue-50 active:scale-95 transition-all"
+          className="w-full py-6 bg-white text-sky-950 font-black text-2xl rounded-lg shadow-xl hover:bg-cyan-50 active:scale-95 transition-all border border-cyan-100"
         >
           Entra nel gioco
         </button>
@@ -87,13 +87,13 @@ export default function Home() {
             setLoginError('');
             setRequestMessage('');
           }}
-          className="w-full py-4 border-2 border-white text-white font-bold text-lg rounded-2xl hover:bg-white/10 active:scale-95 transition-all"
+          className="w-full py-4 border-2 border-cyan-100/80 text-white font-black text-lg rounded-lg bg-white/10 hover:bg-white/20 active:scale-95 transition-all backdrop-blur"
         >
           Accesso host
         </button>
       </motion.div>
 
-      <p className="text-blue-300 text-sm font-semibold absolute bottom-6">The Party game room</p>
+      <p className="text-cyan-50/90 text-sm font-black absolute bottom-6 tracking-[0.18em] uppercase">The Party game room</p>
 
       {loginOpen ? (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setLoginOpen(false)}>
@@ -103,7 +103,7 @@ export default function Home() {
             className="card w-full max-w-md"
             onClick={(event) => event.stopPropagation()}
           >
-            <h2 className="text-2xl font-black text-gray-800 mb-3">Portale host</h2>
+            <h2 className="text-2xl font-black text-sky-950 mb-3">Portale host</h2>
             <p className="text-gray-500 text-sm font-semibold mb-6">Accedi con Google per creare la sessione e aprire il maxischermo.</p>
 
             {loginError ? (

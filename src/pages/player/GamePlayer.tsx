@@ -295,7 +295,7 @@ export default function GamePlayer() {
   if (loading || !session || !player) {
     return (
       <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-6 p-6">
-        <IceBreakerLogo className="text-[2.73rem]" />
+        <IceBreakerLogo className="text-[1.911rem]" />
         <p className="text-light text-base">{error || copy.connecting}</p>
       </div>
     );
@@ -305,7 +305,7 @@ export default function GamePlayer() {
     clearPlayerToken();
     return (
       <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-6 p-6">
-        <IceBreakerLogo className="text-[2.73rem]" />
+        <IceBreakerLogo className="text-[1.911rem]" />
         <p className="text-light text-base">{copy.sessionClosed}</p>
         <button onClick={() => nav('/play')} className="btn-white">{copy.backHome}</button>
       </div>
@@ -315,7 +315,7 @@ export default function GamePlayer() {
   if (session.status === 'draft' || session.status === 'lobby' || session.status === 'ready') {
     return (
       <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-6 p-6">
-        <IceBreakerLogo className="text-[2.73rem]" />
+        <IceBreakerLogo className="text-[1.911rem]" />
         <motion.div animate={{ scale: [1, 1.08, 1] }} transition={{ repeat: Infinity, duration: 1.8 }} className="text-[144px]">
           {player.avatar}
         </motion.div>
@@ -335,7 +335,7 @@ export default function GamePlayer() {
     return (
       <div className="min-h-screen app-bg flex flex-col gap-4 p-4">
         <div className="text-center pt-2">
-          <IceBreakerLogo className="text-[2.3rem]" />
+          <IceBreakerLogo className="text-[1.61rem]" />
           <p className="text-blue-300 font-semibold mt-2">{player.avatar} {player.nickname}</p>
         </div>
 
@@ -386,7 +386,7 @@ export default function GamePlayer() {
   if (player.submitted && session.status === 'collecting') {
     return (
       <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-6 p-6">
-        <IceBreakerLogo className="text-[2.73rem]" />
+        <IceBreakerLogo className="text-[1.911rem]" />
         <motion.div animate={{ scale: [1, 1.08, 1] }} transition={{ repeat: Infinity, duration: 1.8 }} className="text-[144px]">
           {player.avatar}
         </motion.div>
@@ -406,7 +406,7 @@ export default function GamePlayer() {
 
     return (
       <div className="min-h-screen app-bg flex flex-col items-center justify-center gap-5 p-6">
-        <IceBreakerLogo className="text-[2.73rem]" />
+        <IceBreakerLogo className="text-[1.911rem]" />
         {session.currentQuestionText ? (
           <div className="card w-full max-w-lg text-center">
             <h2 className="text-2xl font-black text-gray-800">{session.currentQuestionText}</h2>

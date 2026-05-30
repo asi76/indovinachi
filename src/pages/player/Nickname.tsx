@@ -80,8 +80,8 @@ export default function Nickname() {
   return (
     <div className="h-screen app-bg flex flex-col overflow-hidden">
       <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="shrink-0 text-center pt-4 pb-1 px-4 relative">
-        <IceBreakerLogo className="text-[2.52rem] mb-2" />
-        <div className="text-blue-300 font-bold tracking-widest mb-1" style={{ fontSize: '1.04rem' }}>CODICE: {code}</div>
+        <IceBreakerLogo className="text-[1.764rem] mb-2" />
+        <div className="text-cyan-50 font-black tracking-widest mb-1 drop-shadow" style={{ fontSize: '1.04rem' }}>CODICE: {code}</div>
         <h2 className="text-white font-black" style={{ fontSize: '1.78rem' }}>Scegli avatar e nickname</h2>
       </motion.div>
 
@@ -122,7 +122,7 @@ export default function Nickname() {
 
       <motion.form initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} onSubmit={join} className="shrink-0 w-full px-6 pb-6 pt-2 flex flex-col gap-3">
         <input
-          className="w-full text-center font-black bg-white rounded-xl py-3 text-gray-800 shadow-xl outline-none ring-4 ring-yellow-400 placeholder-light"
+          className="w-full text-center font-black bg-white rounded-lg py-3 text-gray-800 shadow-xl outline-none ring-4 ring-pink-400 placeholder-light"
           style={{ fontSize: '1.5rem' }}
           placeholder="Il tuo nickname"
           value={nickname}

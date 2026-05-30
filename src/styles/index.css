@@ -4,37 +4,62 @@
 html, body, #root { height: 100%; margin: 0; }
 body { margin: 0 !important; }
 
+:root {
+  --ice-50: #f0fbff;
+  --ice-100: #dff7ff;
+  --ice-300: #67e8f9;
+  --ice-500: #06b6d4;
+  --ice-700: #0369a1;
+  --midnight: #06162f;
+  --party-pink: #ec4899;
+  --party-yellow: #facc15;
+  --party-violet: #7c3aed;
+}
+
+body {
+  background-color: var(--midnight);
+}
+
 .app-bg {
-  background: #38bdf8;
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.12) 0 1px, transparent 1px 110px),
+    linear-gradient(150deg, rgba(103, 232, 249, 0.18) 0 1px, transparent 1px 88px),
+    linear-gradient(135deg, #06162f 0%, #083b69 30%, #0891b2 58%, #c7f6ff 100%);
+  background-attachment: fixed;
 }
 
 .icebreaker-logo {
   letter-spacing: 0;
+  text-transform: uppercase;
+  filter: drop-shadow(0 16px 24px rgba(6, 22, 47, 0.28));
 }
 
 .icebreaker-logo-ice,
 .icebreaker-logo-breaker {
-  -webkit-text-stroke: 2px #111827;
+  -webkit-text-stroke: 2px #06162f;
   text-shadow:
-    2px 2px 0 #111827,
-    -1px -1px 0 #111827,
-    1px -1px 0 #111827,
-    -1px 1px 0 #111827;
+    3px 3px 0 rgba(6, 22, 47, 0.95),
+    0 0 18px rgba(103, 232, 249, 0.55),
+    0 0 34px rgba(236, 72, 153, 0.24);
 }
 
 .icebreaker-logo-ice {
-  color: #ffffff;
+  color: var(--ice-50);
 }
 
 .icebreaker-logo-breaker {
-  color: #2563eb;
+  color: #0ea5e9;
 }
 
 .card {
-  background: white;
-  border-radius: 1.5rem;
-  box-shadow: 0 20px 35px rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 8px;
+  box-shadow:
+    0 22px 55px rgba(6, 22, 47, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
   padding: 1.5rem;
+  backdrop-filter: blur(18px) saturate(1.18);
 }
 
 .btn-purple,
@@ -43,33 +68,41 @@ body { margin: 0 !important; }
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 1rem;
+  border-radius: 8px;
   padding: 0.75rem 1.5rem;
   font-weight: 900;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
 .btn-purple {
-  background: #1e3a8a;
+  background: linear-gradient(135deg, #0e7490 0%, #2563eb 54%, #7c3aed 100%);
   color: white;
-  box-shadow: 0 10px 18px rgba(30, 58, 138, 0.25);
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.22) inset;
 }
 
-.btn-purple:hover { background: #1e40af; }
+.btn-purple:hover {
+  background: linear-gradient(135deg, #0891b2 0%, #1d4ed8 50%, #6d28d9 100%);
+  box-shadow: 0 18px 32px rgba(37, 99, 235, 0.34), 0 0 24px rgba(103, 232, 249, 0.28);
+}
 
 .btn-white {
-  background: white;
-  color: #1e3a8a;
-  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.12);
+  background: rgba(240, 251, 255, 0.94);
+  color: #075985;
+  border: 1px solid rgba(103, 232, 249, 0.55);
+  box-shadow: 0 12px 24px rgba(6, 22, 47, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
-.btn-white:hover { background: #eff6ff; }
+.btn-white:hover {
+  background: white;
+  color: #0f172a;
+  box-shadow: 0 16px 30px rgba(6, 22, 47, 0.16), 0 0 22px rgba(103, 232, 249, 0.34);
+}
 
 .btn-purple:disabled,
 .btn-white:disabled {
-  background: #e5e7eb;
-  color: #9ca3af;
+  background: #dbeafe;
+  color: #94a3b8;
   box-shadow: none;
   cursor: not-allowed;
   opacity: 1;
@@ -77,7 +110,7 @@ body { margin: 0 !important; }
 
 .btn-purple:disabled:hover,
 .btn-white:disabled:hover {
-  background: #e5e7eb;
+  background: #dbeafe;
 }
 
 .btn-purple:active,
@@ -92,19 +125,20 @@ body { margin: 0 !important; }
 
 .input-field {
   width: 100%;
-  border-radius: 1rem;
-  border: 2px solid #e9d5ff;
-  background: white;
+  border-radius: 8px;
+  border: 2px solid rgba(103, 232, 249, 0.52);
+  background: rgba(255, 255, 255, 0.92);
   padding: 0.75rem 1rem;
-  color: #1f2937;
+  color: #0f172a;
   font-weight: 600;
   outline: none;
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
 }
 
 .input-field:focus {
-  border-color: #8b5cf6;
-  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.18);
+  background: white;
+  border-color: var(--party-pink);
+  box-shadow: 0 0 0 4px rgba(236, 72, 153, 0.15), 0 0 24px rgba(103, 232, 249, 0.25);
 }
 
 .placeholder-light::placeholder {
@@ -125,5 +159,3 @@ body { margin: 0 !important; }
 
 .h-screen { height: 100dvh; }
 .min-h-screen { min-height: 100dvh; }
-
-body { background-color: #38bdf8; }

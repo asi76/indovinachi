@@ -60,11 +60,11 @@ export default function HostAuth() {
     <div className="min-h-screen app-bg flex flex-col items-center justify-center p-4 gap-6">
       <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-center">
         <IceBreakerLogo className="text-4xl" />
-        <p className="text-blue-300 mt-1">Portale host</p>
+        <p className="text-cyan-50 font-black mt-2 drop-shadow">Portale host</p>
       </motion.div>
 
       <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="card w-full max-w-md">
-        <h2 className="text-2xl font-black text-gray-800 mb-3">Accesso host</h2>
+        <h2 className="text-2xl font-black text-sky-950 mb-3">Accesso host</h2>
         <p className="text-gray-500 text-sm font-semibold mb-6">Gestisci sessione, QR, telecomando e schermo grande.</p>
 
         {error ? <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl p-3 mb-4 text-sm font-semibold">{error}</div> : null}
@@ -87,7 +87,7 @@ export default function HostAuth() {
         </div>
       </motion.div>
 
-      <button onClick={() => nav('/')} className="text-blue-400 hover:text-white font-semibold text-sm transition-colors">← Torna alla home</button>
+      <button onClick={() => nav('/')} className="text-cyan-50 hover:text-white font-black text-sm transition-colors">← Torna alla home</button>
     </div>
   );
 }

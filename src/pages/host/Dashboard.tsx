@@ -209,13 +209,13 @@ export default function HostDashboard() {
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
           <IceBreakerLogo className="text-[2.1rem]" />
           <div className="flex items-center gap-4">
-            <button onClick={() => nav('/host/admin/questions')} className="text-blue-300 hover:text-white text-sm font-bold transition-colors">
+            <button onClick={() => nav('/host/admin/questions')} className="text-cyan-50/90 hover:text-white text-sm font-black transition-colors">
               Editor domande
             </button>
-            <button onClick={() => nav('/host/admin/responses')} className="text-blue-300 hover:text-white text-sm font-bold transition-colors">
+            <button onClick={() => nav('/host/admin/responses')} className="text-cyan-50/90 hover:text-white text-sm font-black transition-colors">
               Editor risposte
             </button>
-            <button onClick={() => void signOutFromGoogle().then(() => window.location.reload())} className="text-blue-300 hover:text-white text-sm font-bold transition-colors">
+            <button onClick={() => void signOutFromGoogle().then(() => window.location.reload())} className="text-cyan-50/90 hover:text-white text-sm font-black transition-colors">
               Logout
             </button>
           </div>
@@ -225,8 +225,8 @@ export default function HostDashboard() {
       <main className="max-w-6xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-8 gap-4">
           <div>
-            <h2 className="text-3xl font-black text-gray-800">Sessione attiva</h2>
-            <p className="text-gray-500 font-semibold mt-1">Stessa impostazione grafica di Quizzone, ma dedicata al reveal di IceBreaker.</p>
+            <h2 className="text-3xl font-black text-white drop-shadow">Sessione attiva</h2>
+            <p className="text-cyan-50/85 font-semibold mt-1">Stessa impostazione grafica di Quizzone, ma dedicata al reveal di IceBreaker.</p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3">
             {!session ? (
@@ -260,7 +260,7 @@ export default function HostDashboard() {
                   <p className="text-blue-400 font-black tracking-widest text-xs">SESSIONE {session.code}</p>
                   <h3 className="text-3xl font-black text-gray-800 mt-1">{session.title}</h3>
                 </div>
-                <span className="bg-blue-100 text-blue-700 text-sm font-black px-4 py-2 rounded-full">{sessionStatusLabel(session.status)}</span>
+                <span className="bg-cyan-100 text-sky-800 text-sm font-black px-4 py-2 rounded-full border border-cyan-200">{sessionStatusLabel(session.status)}</span>
               </div>
 
               {isCollecting ? (
@@ -292,16 +292,16 @@ export default function HostDashboard() {
                 </div>
               </div>
 
-              <div className="mb-5 rounded-2xl border border-blue-100 bg-blue-50/60 p-4">
+                <div className="mb-5 rounded-lg border border-cyan-200 bg-cyan-50/70 p-4">
                 <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
                   <div>
-                    <label className="block text-xs font-black tracking-widest text-gray-500 mb-2">Assegnazione al check-in</label>
+                    <label className="block text-xs font-black tracking-widest text-sky-800 mb-2">Assegnazione al check-in</label>
                     <button
                       type="button"
                       onClick={() => void handleQuestionModeToggle()}
-                      className="inline-flex items-center gap-3 rounded-full bg-white px-4 py-2 font-black text-gray-800 shadow-sm"
+                      className="inline-flex items-center gap-3 rounded-lg bg-white px-4 py-2 font-black text-sky-950 shadow-sm border border-cyan-100"
                     >
-                      <span className={`h-7 w-12 rounded-full p-1 transition-colors ${questionModeDraft === 'random' ? 'bg-blue-700' : 'bg-gray-300'}`}>
+                      <span className={`h-7 w-12 rounded-full p-1 transition-colors ${questionModeDraft === 'random' ? 'bg-cyan-600' : 'bg-gray-300'}`}>
                         <span className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${questionModeDraft === 'random' ? 'translate-x-5' : ''}`} />
                       </span>
                       {questionModeDraft === 'direct' ? 'Domande dirette' : 'Domande casuali dal database'}
@@ -361,17 +361,17 @@ export default function HostDashboard() {
               <motion.div initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="card">
                 <h3 className="text-2xl font-black text-gray-800 mb-4">Accessi rapidi</h3>
                 <div className="grid grid-cols-3 gap-3 text-center">
-                  <a href={joinUrl(session)} target="_blank" rel="noreferrer" className="bg-blue-50 rounded-2xl p-3 hover:bg-blue-100 transition-colors">
+                  <a href={joinUrl(session)} target="_blank" rel="noreferrer" className="bg-cyan-50 rounded-lg p-3 hover:bg-white transition-colors border border-cyan-100">
                     <QRCodeSVG value={joinUrl(session)} size={92} includeMargin className="mx-auto mb-2" />
-                    <span className="text-xs font-black text-blue-700">Giocatori</span>
+                    <span className="text-xs font-black text-sky-800">Giocatori</span>
                   </a>
-                  <a href={presenterUrl(session)} target="_blank" rel="noreferrer" className="bg-blue-50 rounded-2xl p-3 hover:bg-blue-100 transition-colors">
+                  <a href={presenterUrl(session)} target="_blank" rel="noreferrer" className="bg-cyan-50 rounded-lg p-3 hover:bg-white transition-colors border border-cyan-100">
                     <QRCodeSVG value={presenterUrl(session)} size={92} includeMargin className="mx-auto mb-2" />
-                    <span className="text-xs font-black text-blue-700">Schermo</span>
+                    <span className="text-xs font-black text-sky-800">Schermo</span>
                   </a>
-                  <a href={remoteUrl(session)} target="_blank" rel="noreferrer" className="bg-blue-50 rounded-2xl p-3 hover:bg-blue-100 transition-colors">
+                  <a href={remoteUrl(session)} target="_blank" rel="noreferrer" className="bg-cyan-50 rounded-lg p-3 hover:bg-white transition-colors border border-cyan-100">
                     <QRCodeSVG value={remoteUrl(session)} size={92} includeMargin className="mx-auto mb-2" />
-                    <span className="text-xs font-black text-blue-700">Telecomando</span>
+                    <span className="text-xs font-black text-sky-800">Telecomando</span>
                   </a>
                 </div>
                 <div className="mt-4 grid sm:grid-cols-2 gap-3">
@@ -387,17 +387,17 @@ export default function HostDashboard() {
               <div className="card">
                 <h3 className="text-2xl font-black text-gray-800 mb-4">Sala</h3>
                 <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="bg-gray-50 rounded-2xl p-4 text-center">
+                  <div className="bg-cyan-50 rounded-lg p-4 text-center border border-cyan-100">
                     <div className="text-3xl font-black text-gray-900">{session.playerCount}</div>
-                    <div className="text-xs font-black text-gray-500 tracking-widest">GIOCATORI</div>
+                    <div className="text-xs font-black text-sky-700 tracking-widest">GIOCATORI</div>
                   </div>
-                  <div className="bg-gray-50 rounded-2xl p-4 text-center">
+                  <div className="bg-cyan-50 rounded-lg p-4 text-center border border-cyan-100">
                     <div className="text-3xl font-black text-gray-900">{session.answeredCount}</div>
-                    <div className="text-xs font-black text-gray-500 tracking-widest">RISPOSTE</div>
+                    <div className="text-xs font-black text-sky-700 tracking-widest">RISPOSTE</div>
                   </div>
-                  <div className="bg-gray-50 rounded-2xl p-4 text-center">
+                  <div className="bg-cyan-50 rounded-lg p-4 text-center border border-cyan-100">
                     <div className="text-3xl font-black text-gray-900">{questionsPerPlayerPreview}</div>
-                    <div className="text-xs font-black text-gray-500 tracking-widest">DOMANDE</div>
+                    <div className="text-xs font-black text-sky-700 tracking-widest">DOMANDE</div>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">

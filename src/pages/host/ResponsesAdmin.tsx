@@ -110,12 +110,12 @@ export default function ResponsesAdmin() {
       <main className="max-w-6xl mx-auto px-6 py-8">
         <div className="mb-6 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>
-            <p className="text-blue-900 font-black tracking-widest text-xs">ADMIN</p>
-            <h1 className="text-3xl font-black text-gray-800">Risposte giocatori</h1>
-            <p className="text-gray-600 font-semibold mt-1">Modifica le risposte che verranno mostrate durante il reveal.</p>
+            <p className="text-cyan-100 font-black tracking-widest text-xs">ADMIN</p>
+            <h1 className="text-3xl font-black text-white drop-shadow">Risposte giocatori</h1>
+            <p className="text-cyan-50/85 font-semibold mt-1">Modifica le risposte che verranno mostrate durante il reveal.</p>
           </div>
           <div className="md:w-[260px]">
-            <label className="block text-xs font-black tracking-widest text-gray-700 mb-2">Sessione</label>
+            <label className="block text-xs font-black tracking-widest text-cyan-50 mb-2">Sessione</label>
             <select
               className="input-field"
               value={selectedSession?.code || ''}
@@ -152,10 +152,10 @@ export default function ResponsesAdmin() {
               {responses.map((response) => {
                 const draft = drafts[response.id] ?? response.answerText;
                 return (
-                  <article key={response.id} className="rounded-2xl border border-gray-200 bg-white/80 p-4">
+                  <article key={response.id} className="rounded-lg border border-cyan-100 bg-white/85 p-4">
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div className="min-w-0">
-                        <p className="text-xs font-black tracking-widest text-blue-700">DOMANDA {response.questionIndex}</p>
+                        <p className="text-xs font-black tracking-widest text-sky-800">DOMANDA {response.questionIndex}</p>
                         <p className="text-sm font-bold text-gray-500">{response.questionText}</p>
                       </div>
                       <span className="shrink-0 text-sm font-black text-gray-800">{response.playerAvatar} {response.playerNickname}</span>

@@ -155,7 +155,7 @@ export default function QuestionsAdmin() {
           </Link>
           <div className="flex items-center gap-3">
             <Link to="/host" className="btn-white py-2 px-4">Dashboard</Link>
-            <button onClick={() => void signOutFromGoogle().then(() => window.location.reload())} className="text-blue-300 hover:text-white text-sm font-bold transition-colors">
+            <button onClick={() => void signOutFromGoogle().then(() => window.location.reload())} className="text-cyan-50/90 hover:text-white text-sm font-black transition-colors">
               Logout
             </button>
           </div>
@@ -165,8 +165,8 @@ export default function QuestionsAdmin() {
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-black text-gray-800">Admin domande</h1>
-            <p className="text-gray-500 font-semibold mt-1">Gestione del database multilingua usato per assegnare le domande ai giocatori.</p>
+            <h1 className="text-3xl font-black text-white drop-shadow">Admin domande</h1>
+            <p className="text-cyan-50/85 font-semibold mt-1">Gestione del database multilingua usato per assegnare le domande ai giocatori.</p>
           </div>
           <button onClick={handleNew} className="btn-purple">Nuova domanda</button>
         </div>
@@ -187,7 +187,7 @@ export default function QuestionsAdmin() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
               <div>
                 <h2 className="text-2xl font-black text-gray-800">Database</h2>
-                <p className="text-sm font-black text-blue-700">{questions.length} domande attive</p>
+                <p className="text-sm font-black text-sky-700">{questions.length} domande attive</p>
               </div>
               <input
                 className="input-field sm:max-w-[280px]"
@@ -197,9 +197,9 @@ export default function QuestionsAdmin() {
               />
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-gray-100">
+            <div className="overflow-x-auto rounded-lg border border-cyan-100">
               <table className="w-full min-w-[760px] border-collapse bg-white">
-                <thead className="bg-blue-50 text-left text-xs font-black tracking-widest text-blue-700">
+                <thead className="bg-cyan-50 text-left text-xs font-black tracking-widest text-sky-800">
                   <tr>
                     <th className="px-4 py-3 w-[33%]">IT</th>
                     <th className="px-4 py-3 w-[33%]">EN</th>
